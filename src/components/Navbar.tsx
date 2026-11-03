@@ -123,7 +123,7 @@ export default function Navbar({
           </nav>
         </div>
 
-        {/* Bottom User & MongoDB Status Card */}
+        {/* Bottom User & PostgreSQL Database Status Card */}
         <div className="pt-4 border-t border-[#EAE5DC] flex flex-col gap-3">
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-2">
@@ -133,7 +133,7 @@ export default function Navbar({
                 }`}
               />
               <span className="text-[11px] font-medium text-[#787E85]">
-                {dbConnected ? "Atlas Synced" : "Connecting..."}
+                {dbConnected ? "PostgreSQL Synced" : "Connecting..."}
               </span>
             </div>
             <span className="text-[10px] text-[#A2A7AE] font-mono">v1.2</span>

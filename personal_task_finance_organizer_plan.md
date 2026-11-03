@@ -298,7 +298,7 @@ Plan for approximately **6–8 weeks at 5–7 hours per week**, alongside full-t
 
 - Create the Next.js project with TypeScript.
 - Configure Tailwind CSS and shadcn/ui.
-- Connect MongoDB Atlas and configure Mongoose.
+- Connect PostgreSQL (`tododb`) and configure Django models.
 - Implement authentication and protected routes.
 - Set up environment variables and `.env.example`.
 

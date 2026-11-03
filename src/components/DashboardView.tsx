@@ -87,7 +87,7 @@ export default function DashboardView({
   ];
 
   // Dynamic or starter tasks for "Today's Tasks"
-  const mongoTasks = dailyQuestions?.finishToday?.items || [];
+  const liveTodayTasks = dailyQuestions?.finishToday?.items || [];
   const defaultTodayTasks = [
     {
       id: "task-demo-1",
@@ -131,8 +131,8 @@ export default function DashboardView({
   };
 
   const tasksToDisplay =
-    mongoTasks.length > 0
-      ? mongoTasks.map((t: any) => ({
+    liveTodayTasks.length > 0
+      ? liveTodayTasks.map((t: any) => ({
           id: t.id || t._id,
           title: t.title,
           category: t.category || "General",

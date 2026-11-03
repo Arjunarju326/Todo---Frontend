@@ -76,7 +76,7 @@ export default function SettingsView({
   };
 
   const handleSeedData = async () => {
-    if (!confirm("Seed initial starter dataset into MongoDB Atlas? This will add sample tasks, finances, and habits.")) return;
+    if (!confirm("Seed initial starter dataset into PostgreSQL (tododb)? This will add sample tasks, finances, and habits.")) return;
     setSeeding(true);
     setMessage("");
     try {
@@ -102,7 +102,7 @@ export default function SettingsView({
           <span>Profile & Workspace Settings</span>
         </h1>
         <p className="text-xs text-[#787E86] mt-0.5">
-          Manage your personal profile, baseline financial numbers, and cloud database connection
+          Manage your personal profile, baseline financial numbers, and database connection
         </p>
       </div>
 
@@ -112,7 +112,7 @@ export default function SettingsView({
         </div>
       )}
 
-      {/* MongoDB Atlas Live Connection Card */}
+      {/* PostgreSQL Live Connection Card */}
       <div className="bg-white p-5 rounded-3xl border border-[#EAE5DC] shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -121,11 +121,11 @@ export default function SettingsView({
             </div>
             <div>
               <h3 className="text-sm font-bold text-[#1A1D20] flex items-center gap-2">
-                <span>MongoDB Atlas Cluster</span>
+                <span>PostgreSQL Database</span>
                 <span className="w-2 h-2 rounded-full bg-[#3D6938] animate-pulse" />
               </h3>
               <p className="text-xs text-[#787E86]">
-                cluster0.er9pby9.mongodb.net
+                {dbStatus?.name ? `Database: ${dbStatus.name} (${dbStatus.host || "127.0.0.1"})` : "PostgreSQL (tododb)"}
               </p>
             </div>
           </div>
