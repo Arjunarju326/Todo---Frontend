@@ -1,26 +1,102 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #F7F5F0;
+  --background-secondary: #EFECE4;
+  --foreground: #1A1D20;
+  --foreground-muted: #6E737B;
+  --foreground-subtle: #9EA3A9;
+  
+  --card-bg: #FFFFFF;
+  --card-border: #EAE5DC;
+  --card-border-hover: #DCD6CC;
+  
+  --primary-dark: #191D23;
+  --primary-dark-hover: #2A303A;
+  
+  --accent-sage: #E8EFE6;
+  --accent-sage-dark: #2F4D2E;
+  --accent-sage-border: #D2E0CF;
+  
+  --accent-sand: #F3ECE2;
+  --accent-terracotta: #C46849;
+  --accent-amber: #D9822B;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-image: 
+    radial-gradient(at 10% 10%, rgba(235, 230, 220, 0.6) 0px, transparent 40%),
+    radial-gradient(at 90% 90%, rgba(232, 239, 230, 0.5) 0px, transparent 40%);
+  background-attachment: fixed;
+}
+
+/* Handwritten script text */
+.font-handwriting {
+  font-family: var(--font-handwriting), "Caveat", "Comic Sans MS", cursive;
+}
+
+/* Warm card styling */
+.theme-card {
+  background: #FFFFFF;
+  border: 1px solid var(--card-border);
+  box-shadow: 0 4px 20px -2px rgba(25, 29, 35, 0.04), 0 2px 6px -1px rgba(25, 29, 35, 0.02);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.theme-card:hover {
+  border-color: var(--card-border-hover);
+  box-shadow: 0 8px 26px -4px rgba(25, 29, 35, 0.07);
+}
+
+.theme-card-interactive:hover {
+  transform: translateY(-2px);
+}
+
+/* Floating Navigation Island */
+.nav-island {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(232, 227, 218, 0.85);
+  box-shadow: 0 10px 30px -4px rgba(25, 29, 35, 0.08), 0 4px 10px -2px rgba(25, 29, 35, 0.04);
+}
+
+/* Hide scrollbar for clean horizontal swipe */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Elegant warm scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(235, 230, 220, 0.5);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(180, 175, 165, 0.45);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(140, 135, 125, 0.65);
+}
+
+/* Custom subtle animations */
+@keyframes subtleFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-subtle-float {
+  animation: subtleFloat 4s ease-in-out infinite;
 }
