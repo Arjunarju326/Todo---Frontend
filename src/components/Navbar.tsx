@@ -1,18 +1,23 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useId, useState } from "react";
 import {
   LayoutDashboard,
   CalendarDays,
   CheckSquare,
   Wallet,
   GraduationCap,
-  Sparkles,
+  Leaf,
   StickyNote,
   Settings,
   Plus,
-  Database,
   Bell,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  BarChart3,
+  Flame,
+  TrendingUp,
 } from "lucide-react";
 
 export type NavTab =
@@ -34,219 +39,495 @@ interface NavbarProps {
   userName?: string;
 }
 
+type NavItem = {
+  id: NavTab;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  badge?: number;
+  matchActive?: boolean;
+};
+
+function MountainSilhouette() {
+  return (
+    <div className="absolute inset-x-0 bottom-0 h-[180px] pointer-events-none overflow-hidden z-0">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/images/hero-mist.jpg"
+        alt=""
+        className="w-full h-full object-cover object-bottom opacity-40 mix-blend-luminosity filter contrast-125"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0e241c] via-[#16372a]/80 to-transparent" />
+    </div>
+  );
+}
+
 export default function Navbar({
   activeTab,
   setActiveTab,
   onOpenQuickAdd,
-  dbConnected,
   overdueCount,
-  userName = "Shihab",
+  userName = "Arjun",
 }: NavbarProps) {
-  const navItems = [
-    { id: "dashboard" as NavTab, label: "Home", icon: LayoutDashboard },
-    { id: "schedule" as NavTab, label: "Schedule", icon: CalendarDays },
+  const [moneyOpen, setMoneyOpen] = useState(true);
+  const [growthOpen, setGrowthOpen] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
+  const moneyId = useId();
+  const growthId = useId();
+
+  useEffect(() => {
+    if (activeTab === "finance") setMoneyOpen(true);
+    if (activeTab === "growth") setGrowthOpen(true);
+  }, [activeTab]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--sidebar-width",
+      collapsed ? "84px" : "260px"
+    );
+  }, [collapsed]);
+
+  const moneyItems = [
+    { label: "Transactions", tab: "finance" as NavTab },
+    { label: "Budgets", tab: "finance" as NavTab },
+    { label: "Bills & EMIs", tab: "finance" as NavTab },
+    { label: "Debts", tab: "finance" as NavTab },
+    { label: "Savings Goals", tab: "finance" as NavTab },
+  ];
+
+  const growthItems = [
+    { label: "Learning", tab: "growth" as NavTab },
+    { label: "Career", tab: "growth" as NavTab },
+    { label: "Projects", tab: "tasks" as NavTab },
+  ];
+
+  const topItems: NavItem[] = [
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     {
-      id: "tasks" as NavTab,
-      label: "Tasks & Projects",
+      id: "tasks",
+      label: "Tasks",
       icon: CheckSquare,
       badge: overdueCount > 0 ? overdueCount : undefined,
     },
-    { id: "finance" as NavTab, label: "Finances", icon: Wallet },
-    { id: "habits" as NavTab, label: "Habits & Routine", icon: Sparkles },
-    { id: "growth" as NavTab, label: "Growth", icon: GraduationCap },
-    { id: "inbox" as NavTab, label: "Notes", icon: StickyNote },
-    { id: "settings" as NavTab, label: "Settings", icon: Settings },
+    { id: "schedule", label: "Calendar", icon: CalendarDays },
   ];
+
+  const bottomItems: NavItem[] = [
+    { id: "habits", label: "Habits", icon: Flame },
+    { id: "inbox", label: "Notes & Inbox", icon: StickyNote },
+    { id: "settings", label: "Reports", icon: BarChart3, matchActive: false },
+    { id: "settings", label: "Settings", icon: Settings },
+  ];
+
+  const mobileItems: NavItem[] = [
+    { id: "dashboard", label: "My Day", icon: LayoutDashboard },
+    { id: "tasks", label: "Tasks", icon: CheckSquare },
+    { id: "finance", label: "Money", icon: Wallet },
+    { id: "growth", label: "Growth", icon: GraduationCap },
+  ];
+
+  const linkClass = (selected: boolean) =>
+    `relative w-full flex items-center ${
+      collapsed ? "justify-center px-2" : "gap-3 px-3"
+    } py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 cursor-pointer df-focus-ring ${
+      selected
+        ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-text)] shadow-sm font-semibold"
+        : "text-[#b7c6ba] hover:text-white hover:bg-white/[0.08]"
+    }`;
 
   return (
     <>
-      {/* Desktop Sidebar (Left side on md+) */}
-      <aside className="hidden md:flex flex-col w-64 border-r border-[#EAE5DC] bg-[#FAF8F5]/90 backdrop-blur-xl p-5 justify-between h-screen fixed left-0 top-0 z-40">
-        <div className="flex flex-col gap-6">
-          {/* Logo / Brand Header */}
-          <div className="flex items-center justify-between px-2 pt-1">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-[#191D23] text-white flex items-center justify-center shadow-md shadow-black/10">
-                <Sparkles className="w-5 h-5" />
+      <aside
+        className={`hidden md:flex flex-col h-screen fixed left-0 top-0 z-40 text-white overflow-hidden animate-df-slide-right transition-[width] duration-300 ease-out ${
+          collapsed ? "w-[84px]" : "w-[260px]"
+        }`}
+        style={{
+          background: "linear-gradient(180deg, #1F4D36 0%, #16372A 100%)",
+        }}
+        aria-label="Primary"
+      >
+        <div className="relative flex flex-col h-full px-3.5 pt-4 pb-3">
+          <MountainSilhouette />
+
+          <div
+            className={`relative flex items-center mb-5 ${
+              collapsed ? "justify-center" : "justify-between gap-2 px-1"
+            }`}
+          >
+            <div className={`flex items-center gap-3 ${collapsed ? "" : "min-w-0"}`}>
+              <div className="w-10 h-10 rounded-2xl bg-[var(--sidebar-active)] text-[var(--sidebar-end)] flex items-center justify-center shadow-lg shadow-black/20 shrink-0">
+                <Leaf className="w-5 h-5" aria-hidden />
               </div>
-              <div>
-                <h1 className="text-sm font-bold text-[#1A1D20] tracking-tight">
-                  Daily Flow
-                </h1>
-                <p className="text-[11px] text-[#787E85]">Plan today. Build tomorrow.</p>
-              </div>
+              {!collapsed && (
+                <div className="min-w-0">
+                  <h1 className="text-[15px] font-bold tracking-tight leading-tight">
+                    Dayflow
+                  </h1>
+                  <p className="text-[11px] text-[#8aa090] font-medium truncate">
+                    Personal Organizer
+                  </p>
+                </div>
+              )}
             </div>
+            {!collapsed && (
+              <button
+                type="button"
+                onClick={() => setCollapsed(true)}
+                aria-label="Collapse sidebar"
+                className="w-6 h-6 rounded-full bg-white/10 hover:bg-white/15 text-[#cfe0d4] flex items-center justify-center transition-colors cursor-pointer df-focus-ring shrink-0"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
-          {/* Quick Add Button */}
-          <button
-            onClick={onOpenQuickAdd}
-            className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl bg-[#191D23] hover:bg-[#2E353F] text-white font-medium text-sm shadow-sm transition-all duration-200 active:scale-[0.98] cursor-pointer"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>New Action</span>
-          </button>
+          {collapsed && (
+            <button
+              type="button"
+              onClick={() => setCollapsed(false)}
+              aria-label="Expand sidebar"
+              className="relative mb-3 mx-auto w-8 h-8 rounded-lg bg-white/10 hover:bg-white/15 text-[#cfe0d4] flex items-center justify-center transition-colors cursor-pointer df-focus-ring"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          )}
 
-          {/* Navigation Links */}
-          <nav className="flex flex-col gap-1">
-            {navItems.map((item) => {
+          <nav className="relative flex-1 overflow-y-auto no-scrollbar space-y-1 pb-4">
+            {topItems.map((item) => {
               const Icon = item.icon;
-              const isActive = activeTab === item.id;
+              const selected = activeTab === item.id;
               return (
                 <button
-                  key={item.id}
+                  key={item.label}
+                  type="button"
+                  title={collapsed ? item.label : undefined}
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer ${
-                    isActive
-                      ? "bg-[#191D23] text-white shadow-sm font-semibold"
-                      : "text-[#626871] hover:text-[#1A1D20] hover:bg-[#ECE8DF]/70"
+                  aria-current={selected ? "page" : undefined}
+                  className={linkClass(selected)}
+                >
+                  <Icon
+                    className={`w-[18px] h-[18px] transition-colors duration-200 ${
+                      selected
+                        ? "text-[var(--sidebar-active-text)]"
+                        : "text-[#8aa090]"
+                    }`}
+                  />
+                  {!collapsed && (
+                    <>
+                      <span className="flex-1 text-left">{item.label}</span>
+                      {item.badge !== undefined && (
+                        <span
+                          className={`text-[10px] min-w-5 h-5 px-1.5 rounded-full flex items-center justify-center font-bold ${
+                            selected
+                              ? "bg-[var(--sidebar-end)] text-[var(--sidebar-active)]"
+                              : "bg-white/10 text-[#d9e8d8]"
+                          }`}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </button>
+              );
+            })}
+
+            {/* Money */}
+            <div className="pt-1">
+              <button
+                type="button"
+                title={collapsed ? "Money" : undefined}
+                aria-expanded={moneyOpen}
+                aria-controls={moneyId}
+                onClick={() => {
+                  if (collapsed) {
+                    setActiveTab("finance");
+                    return;
+                  }
+                  setMoneyOpen((v) => !v);
+                }}
+                onDoubleClick={() => setActiveTab("finance")}
+                className={`w-full flex items-center ${
+                  collapsed ? "justify-center px-2" : "gap-3 px-3"
+                } py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 cursor-pointer df-focus-ring ${
+                  activeTab === "finance"
+                    ? "bg-white/10 text-white"
+                    : "text-[#b7c6ba] hover:text-white hover:bg-white/[0.08]"
+                }`}
+              >
+                <Wallet
+                  className={`w-[18px] h-[18px] ${
+                    activeTab === "finance"
+                      ? "text-[var(--sidebar-active)]"
+                      : "text-[#8aa090]"
+                  }`}
+                />
+                {!collapsed && (
+                  <>
+                    <span className="flex-1 text-left">Money</span>
+                    <ChevronDown
+                      className={`w-4 h-4 text-[#8aa090] transition-transform duration-300 ${
+                        moneyOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </>
+                )}
+              </button>
+              {!collapsed && (
+                <div
+                  id={moneyId}
+                  className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
+                    moneyOpen
+                      ? "grid-rows-[1fr] opacity-100 mt-0.5"
+                      : "grid-rows-[0fr] opacity-0"
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-[#7B818A]"}`} />
-                    <span>{item.label}</span>
+                  <div className="overflow-hidden space-y-0.5 pl-4">
+                    {moneyItems.map((item) => (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={() => setActiveTab(item.tab)}
+                        className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] text-[#9db0a2] hover:text-white hover:bg-white/[0.08] transition-all duration-200 cursor-pointer df-focus-ring"
+                      >
+                        <span
+                          className="w-1.5 h-1.5 rounded-full bg-[#8aa090] shrink-0"
+                          aria-hidden
+                        />
+                        {item.label}
+                      </button>
+                    ))}
                   </div>
-                  {item.badge !== undefined && (
-                    <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
-                        isActive
-                          ? "bg-white/20 text-white"
-                          : "bg-[#E6EDE3] text-[#2F4D2E]"
+                </div>
+              )}
+            </div>
+
+            {/* Growth */}
+            <div>
+              <button
+                type="button"
+                title={collapsed ? "Growth" : undefined}
+                aria-expanded={growthOpen}
+                aria-controls={growthId}
+                onClick={() => {
+                  if (collapsed) {
+                    setActiveTab("growth");
+                    return;
+                  }
+                  setGrowthOpen((v) => !v);
+                }}
+                className={`w-full flex items-center ${
+                  collapsed ? "justify-center px-2" : "gap-3 px-3"
+                } py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 cursor-pointer df-focus-ring ${
+                  activeTab === "growth"
+                    ? "bg-white/10 text-white"
+                    : "text-[#b7c6ba] hover:text-white hover:bg-white/[0.08]"
+                }`}
+              >
+                <TrendingUp
+                  className={`w-[18px] h-[18px] ${
+                    activeTab === "growth"
+                      ? "text-[var(--sidebar-active)]"
+                      : "text-[#8aa090]"
+                  }`}
+                />
+                {!collapsed && (
+                  <>
+                    <span className="flex-1 text-left">Growth</span>
+                    <ChevronDown
+                      className={`w-4 h-4 text-[#8aa090] transition-transform duration-300 ${
+                        growthOpen ? "rotate-180" : ""
                       }`}
-                    >
-                      {item.badge}
-                    </span>
+                    />
+                  </>
+                )}
+              </button>
+              {!collapsed && (
+                <div
+                  id={growthId}
+                  className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
+                    growthOpen
+                      ? "grid-rows-[1fr] opacity-100 mt-0.5"
+                      : "grid-rows-[0fr] opacity-0"
+                  }`}
+                >
+                  <div className="overflow-hidden space-y-0.5 pl-4">
+                    {growthItems.map((item) => (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={() => setActiveTab(item.tab)}
+                        className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] text-[#9db0a2] hover:text-white hover:bg-white/[0.08] transition-all duration-200 cursor-pointer df-focus-ring"
+                      >
+                        <span
+                          className="w-1.5 h-1.5 rounded-full bg-[#8aa090] shrink-0"
+                          aria-hidden
+                        />
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {bottomItems.map((item) => {
+              const Icon = item.icon;
+              const selected =
+                item.matchActive === false ? false : activeTab === item.id;
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  title={collapsed ? item.label : undefined}
+                  onClick={() => setActiveTab(item.id)}
+                  aria-current={selected ? "page" : undefined}
+                  className={linkClass(selected)}
+                >
+                  <Icon
+                    className={`w-[18px] h-[18px] transition-colors duration-200 ${
+                      selected
+                        ? "text-[var(--sidebar-active-text)]"
+                        : "text-[#8aa090]"
+                    }`}
+                  />
+                  {!collapsed && (
+                    <span className="flex-1 text-left">{item.label}</span>
                   )}
                 </button>
               );
             })}
           </nav>
+
         </div>
+      </aside>
 
-        {/* Bottom User & PostgreSQL Database Status Card */}
-        <div className="pt-4 border-t border-[#EAE5DC] flex flex-col gap-3">
-          <div className="flex items-center justify-between px-2">
-            <div className="flex items-center gap-2">
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  dbConnected ? "bg-[#3D6938] animate-pulse" : "bg-[#C46849]"
-                }`}
-              />
-              <span className="text-[11px] font-medium text-[#787E85]">
-                {dbConnected ? "PostgreSQL Synced" : "Connecting..."}
-              </span>
+      {activeTab === "dashboard" && (
+        <header className="md:hidden flex items-center justify-between px-5 pt-3 pb-2 bg-[var(--background)] sticky top-0 z-30">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl bg-[var(--sidebar)] text-[var(--sidebar-active)] flex items-center justify-center shadow-sm">
+              <Leaf className="w-4 h-4" />
             </div>
-            <span className="text-[10px] text-[#A2A7AE] font-mono">v1.2</span>
+            <h2 className="font-display text-[20px] font-bold text-[var(--sidebar-end)] leading-none tracking-tight">
+              Dayflow
+            </h2>
           </div>
-
-          <div
-            onClick={() => setActiveTab("settings")}
-            className="flex items-center gap-3 p-2 rounded-xl hover:bg-[#EFECE5] cursor-pointer transition-colors"
-          >
-            <div className="w-8 h-8 rounded-full overflow-hidden border border-[#EAE5DC] bg-[#E8EFE6] flex items-center justify-center">
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setActiveTab("settings")}
+              aria-label="Notifications"
+              className="w-9 h-9 rounded-full bg-white border border-[var(--card-border)] flex items-center justify-center text-[var(--sidebar-end)] relative df-focus-ring shadow-sm"
+            >
+              <Bell className="w-[18px] h-[18px]" />
+              <span className="w-2 h-2 rounded-full bg-[var(--alert)] absolute top-1.5 right-1.5 ring-2 ring-white" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("settings")}
+              className="w-9 h-9 rounded-full overflow-hidden border-2 border-white shadow-sm bg-[var(--accent-mint)] cursor-pointer df-focus-ring"
+              aria-label={`${userName} profile`}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/images/avatar.jpg"
-                alt="User Avatar"
+                alt=""
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = "none";
                 }}
               />
-            </div>
-            <div className="text-left overflow-hidden">
-              <p className="text-xs font-semibold text-[#1A1D20] truncate">
-                {userName}
-              </p>
-              <p className="text-[10px] text-[#787E85] truncate">Free Plan</p>
-            </div>
+            </button>
           </div>
-        </div>
-      </aside>
+        </header>
+      )}
 
-      {/* Mobile Top Header */}
-      <header className="md:hidden flex items-center justify-between px-4 py-3 bg-[#FAF8F5]/90 backdrop-blur-md border-b border-[#EAE5DC] sticky top-0 z-30">
-        <div>
-          <span className="text-xs font-handwriting text-[#5A6068] text-base leading-none">
-            Small steps Big results ✈️
-          </span>
-          <h2 className="text-sm font-bold text-[#1A1D20] leading-tight">Daily Flow</h2>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setActiveTab("settings")}
-            className="w-8 h-8 rounded-full bg-[#FFFFFF] border border-[#EAE5DC] flex items-center justify-center text-[#4B525B] relative shadow-xs"
-          >
-            <Bell className="w-4 h-4" />
-            <span className="w-2 h-2 rounded-full bg-[#D97706] absolute top-1 right-1" />
-          </button>
-          <div
-            onClick={() => setActiveTab("settings")}
-            className="w-8 h-8 rounded-full overflow-hidden border border-[#EAE5DC] bg-[#E8EFE6] flex items-center justify-center cursor-pointer shadow-xs"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/images/avatar.jpg"
-              alt="User Avatar"
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLElement).style.display = "none";
-              }}
-            />
-          </div>
-        </div>
-      </header>
-
-      {/* Floating Mobile Bottom Navigation Bar (Matching Screen 2 pill bar + FAB) */}
-      <div className="md:hidden fixed bottom-4 left-0 right-0 z-40 px-4 flex items-center justify-center pointer-events-none">
-        <div className="flex items-center gap-2 pointer-events-auto">
-          {/* Island Navigation Pill */}
-          <nav className="nav-island rounded-full px-4 py-2 flex items-center gap-4 shadow-xl">
-            {navItems.slice(0, 4).map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  aria-label={item.label}
-                  className={`p-2 rounded-full transition-all relative ${
-                    isActive
-                      ? "text-[#191D23] font-bold"
-                      : "text-[#8E949D] hover:text-[#1A1D20]"
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 pointer-events-none">
+        <div className="px-3 pb-3 pt-8">
+          <div className="relative flex items-end gap-2">
+            <nav
+              className="nav-island flex-1 rounded-[28px] px-1.5 py-2 flex items-end justify-between pointer-events-auto shadow-xl"
+              aria-label="Mobile"
+            >
+              {mobileItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setActiveTab(item.id)}
+                    aria-label={item.label}
+                    aria-current={isActive ? "page" : undefined}
+                    className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-2xl transition-all duration-200 df-focus-ring ${
+                      isActive
+                        ? "text-[var(--sidebar)]"
+                        : "text-[var(--foreground-subtle)]"
+                    }`}
+                  >
+                    <Icon
+                      className={`w-5 h-5 ${isActive ? "stroke-[2.25]" : "stroke-[1.75]"}`}
+                    />
+                    <span
+                      className={`text-[10px] leading-none truncate ${
+                        isActive ? "font-bold" : "font-medium"
+                      }`}
+                    >
+                      {item.label}
+                    </span>
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setActiveTab("settings")}
+                aria-label="More"
+                aria-current={
+                  activeTab === "settings" ||
+                  activeTab === "habits" ||
+                  activeTab === "inbox"
+                    ? "page"
+                    : undefined
+                }
+                className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-2xl transition-all duration-200 df-focus-ring ${
+                  activeTab === "settings" ||
+                  activeTab === "habits" ||
+                  activeTab === "inbox"
+                    ? "text-[var(--sidebar)]"
+                    : "text-[var(--foreground-subtle)]"
+                }`}
+              >
+                <Settings
+                  className={`w-5 h-5 ${
+                    activeTab === "settings" ||
+                    activeTab === "habits" ||
+                    activeTab === "inbox"
+                      ? "stroke-[2.25]"
+                      : "stroke-[1.75]"
+                  }`}
+                />
+                <span
+                  className={`text-[10px] leading-none ${
+                    activeTab === "settings" ||
+                    activeTab === "habits" ||
+                    activeTab === "inbox"
+                      ? "font-bold"
+                      : "font-medium"
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
-                  {isActive && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#191D23] absolute -bottom-1 left-1/2 -translate-x-1/2" />
-                  )}
-                </button>
-              );
-            })}
-            <button
-              onClick={() => setActiveTab("settings")}
-              aria-label="Settings"
-              className={`p-2 rounded-full transition-all relative ${
-                activeTab === "settings"
-                  ? "text-[#191D23] font-bold"
-                  : "text-[#8E949D] hover:text-[#1A1D20]"
-              }`}
-            >
-              <Settings className="w-5 h-5" />
-              {activeTab === "settings" && (
-                <span className="w-1.5 h-1.5 rounded-full bg-[#191D23] absolute -bottom-1 left-1/2 -translate-x-1/2" />
-              )}
-            </button>
-          </nav>
+                  More
+                </span>
+              </button>
+            </nav>
 
-          {/* Floating Action Button (FAB) from the screenshot */}
-          <button
-            onClick={onOpenQuickAdd}
-            aria-label="Add item"
-            className="w-12 h-12 rounded-full bg-[#191D23] text-white flex items-center justify-center shadow-xl hover:bg-[#2C3440] transition-all transform active:scale-95 cursor-pointer"
-          >
-            <Plus className="w-6 h-6 stroke-[2.5]" />
-          </button>
+            <button
+              type="button"
+              onClick={onOpenQuickAdd}
+              aria-label="Add item"
+              className="pointer-events-auto mb-1 w-12 h-12 shrink-0 rounded-full bg-[var(--sidebar)] text-white flex items-center justify-center shadow-[0_8px_20px_rgba(31,77,54,0.35)] hover:bg-[var(--sidebar-soft)] transition-all duration-200 active:scale-95 cursor-pointer df-focus-ring"
+            >
+              <Plus className="w-6 h-6 stroke-[2.5]" />
+            </button>
+          </div>
         </div>
       </div>
     </>

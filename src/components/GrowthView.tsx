@@ -2,18 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  GraduationCap,
-  Briefcase,
-  Plus,
-  BookOpen,
-  Clock,
-  TrendingUp,
-  Building,
-  MapPin,
+  Search,
   Calendar,
-  CheckCircle,
-  Trash2,
-  ExternalLink,
+  Check,
+  Flame,
+  BookOpen,
+  Plus,
 } from "lucide-react";
 
 interface LearningGoal {
@@ -28,329 +22,338 @@ interface LearningGoal {
   notes: string;
 }
 
-interface JobApplication {
+interface Habit {
   _id: string;
-  company: string;
-  role: string;
-  status: "APPLIED" | "SCREENING" | "INTERVIEW" | "OFFER" | "REJECTED";
-  location: string;
-  appliedDate: string;
-  salaryEstimate?: string;
-  notes?: string;
+  name: string;
+  category: string;
+  streak: number;
+  completedDates: string[];
+  targetDaysPerWeek: number;
 }
+
+interface Note {
+  _id: string;
+  title: string;
+  content: string;
+  category: string;
+  isPinned: boolean;
+}
+
+const FALLBACK_LEARNING = [
+  {
+    _id: "l1",
+    title: "Python Fundamentals",
+    progress: 65,
+    lessons: "13 / 20 lessons",
+  },
+  {
+    _id: "l2",
+    title: "Django REST APIs",
+    progress: 40,
+    lessons: "8 / 20 lessons",
+  },
+  {
+    _id: "l3",
+    title: "Next.js App Router",
+    progress: 25,
+    lessons: "5 / 20 lessons",
+  },
+];
+
+const FALLBACK_HABITS = [
+  { _id: "h1", name: "Study 1 focused hour", streak: 5, done: true },
+  { _id: "h2", name: "Move / Workout", streak: 3, done: false },
+  { _id: "h3", name: "Read 20 pages", streak: 7, done: true },
+  { _id: "h4", name: "No social before noon", streak: 2, done: false },
+];
+
+const FALLBACK_NOTES = [
+  { _id: "n1", title: "Ship Dayflow mobile polish tonight", done: false },
+  { _id: "n2", title: "Idea: weekly money review ritual", done: true },
+  { _id: "n3", title: "Buy protein + oats", done: false },
+];
 
 export default function GrowthView() {
   const [learningGoals, setLearningGoals] = useState<LearningGoal[]>([]);
-  const [jobApplications, setJobApplications] = useState<JobApplication[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"LEARNING" | "JOBS">("LEARNING");
-
-  // Forms
-  const [isAddingGoal, setIsAddingGoal] = useState(false);
-  const [isAddingJob, setIsAddingJob] = useState(false);
-
-  // New Goal Form
-  const [goalTitle, setGoalTitle] = useState("");
-  const [goalCategory, setGoalCategory] = useState("NEXTJS");
-  const [goalPlatform, setGoalPlatform] = useState("");
-  const [goalHours, setGoalHours] = useState("5");
-
-  // New Job Form
-  const [jobCompany, setJobCompany] = useState("");
-  const [jobRole, setJobRole] = useState("");
-  const [jobStatus, setJobStatus] = useState<JobApplication["status"]>("APPLIED");
-  const [jobLocation, setJobLocation] = useState("Remote / Hybrid");
-  const [jobSalary, setJobSalary] = useState("");
-  const [jobNotes, setJobNotes] = useState("");
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch("/api/growth");
-      const data = await res.json();
-      if (data.success) {
-        setLearningGoals(data.learningGoals || []);
-        setJobApplications(data.jobApplications || []);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [localHabits, setLocalHabits] = useState(FALLBACK_HABITS);
+  const [localNotes, setLocalNotes] = useState(FALLBACK_NOTES);
+  const [capture, setCapture] = useState("");
+  const [weeklyHours] = useState({ done: 4, total: 6 });
 
   useEffect(() => {
-    fetchData();
+    const load = async () => {
+      try {
+        const [growthRes, habitsRes, notesRes] = await Promise.all([
+          fetch("/api/growth"),
+          fetch("/api/habits"),
+          fetch("/api/notes"),
+        ]);
+        const growth = await growthRes.json();
+        const habitsData = await habitsRes.json();
+        const notesData = await notesRes.json();
+        if (growth.success) setLearningGoals(growth.learningGoals || []);
+        if (habitsData.success) setHabits(habitsData.habits || []);
+        if (notesData.success) setNotes(notesData.notes || []);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    load();
   }, []);
 
-  const handleCreateGoal = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!goalTitle.trim()) return;
+  const learningCards =
+    learningGoals.length > 0
+      ? learningGoals.slice(0, 3).map((g) => ({
+          _id: g._id,
+          title: g.title,
+          progress: g.progressPercentage || 0,
+          lessons: `${Math.round(((g.progressPercentage || 0) / 100) * 20)} / 20 lessons`,
+        }))
+      : FALLBACK_LEARNING;
 
-    try {
-      const res = await fetch("/api/growth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          itemType: "learning",
-          title: goalTitle,
-          category: goalCategory,
-          platformOrCourse: goalPlatform,
-          weeklyTargetHours: Number(goalHours),
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setLearningGoals((prev) => [...prev, data.goal]);
-        setGoalTitle("");
-        setGoalPlatform("");
-        setIsAddingGoal(false);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  const todayIso = new Date().toISOString().split("T")[0];
 
-  const handleUpdateProgress = async (goalId: string, newProgress: number) => {
-    try {
-      setLearningGoals((prev) =>
-        prev.map((g) =>
-          g._id === goalId ? { ...g, progressPercentage: newProgress } : g
-        )
+  const habitRows =
+    habits.length > 0
+      ? habits.slice(0, 4).map((h) => ({
+          _id: h._id,
+          name: h.name,
+          streak: h.streak || 0,
+          done: h.completedDates?.includes(todayIso) || false,
+        }))
+      : localHabits;
+
+  const noteRows =
+    notes.length > 0
+      ? notes.slice(0, 4).map((n) => ({
+          _id: n._id,
+          title: n.title || n.content,
+          done: false,
+        }))
+      : localNotes;
+
+  const weeklyPct = Math.round((weeklyHours.done / weeklyHours.total) * 100);
+
+  const toggleHabit = async (id: string) => {
+    if (habits.length === 0) {
+      setLocalHabits((prev) =>
+        prev.map((h) => (h._id === id ? { ...h, done: !h.done } : h))
       );
-
-      await fetch("/api/growth", {
+      return;
+    }
+    try {
+      await fetch("/api/habits", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          itemType: "learning",
-          id: goalId,
-          progressPercentage: newProgress,
-          status: newProgress >= 100 ? "COMPLETED" : "IN_PROGRESS",
-        }),
+        body: JSON.stringify({ id, date: todayIso }),
       });
+      setHabits((prev) =>
+        prev.map((h) => {
+          if (h._id !== id) return h;
+          const has = h.completedDates?.includes(todayIso);
+          return {
+            ...h,
+            completedDates: has
+              ? h.completedDates.filter((d) => d !== todayIso)
+              : [...(h.completedDates || []), todayIso],
+          };
+        })
+      );
     } catch (err) {
       console.error(err);
-      fetchData();
     }
   };
 
-  const handleDeleteItem = async (id: string, itemType: "learning" | "job") => {
-    if (!confirm("Are you sure you want to delete this?")) return;
-    try {
-      if (itemType === "learning") {
-        setLearningGoals((prev) => prev.filter((g) => g._id !== id));
-      } else {
-        setJobApplications((prev) => prev.filter((j) => j._id !== id));
-      }
-      await fetch(`/api/growth?id=${id}&itemType=${itemType}`, { method: "DELETE" });
-    } catch (err) {
-      console.error(err);
-      fetchData();
-    }
+  const toggleNote = (id: string) => {
+    setLocalNotes((prev) =>
+      prev.map((n) => (n._id === id ? { ...n, done: !n.done } : n))
+    );
+  };
+
+  const handleCapture = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!capture.trim()) return;
+    setLocalNotes((prev) => [
+      { _id: `n-${Date.now()}`, title: capture.trim(), done: false },
+      ...prev,
+    ]);
+    setCapture("");
   };
 
   return (
-    <div className="space-y-6 pb-28 md:pb-16 max-w-5xl mx-auto px-1 md:px-4">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
-        <div>
-          <h1 className="text-xl md:text-2xl font-extrabold text-[#1A1D20] tracking-tight flex items-center gap-2">
-            <GraduationCap className="w-5 h-5 text-[#191D23]" />
-            <span>Learning & Career Growth</span>
-          </h1>
-          <p className="text-xs text-[#787E86] mt-0.5">
-            Skill tracks, curriculum milestones, and job hunt progress
-          </p>
+    <div className="space-y-4 pb-8 md:pb-16 max-w-5xl mx-auto">
+      <div className="flex items-center justify-between gap-3 pt-1">
+        <h1 className="font-display text-[24px] font-bold text-[var(--sidebar-end)] tracking-tight leading-tight">
+          Growth &amp; Habits
+        </h1>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="Search"
+            className="w-9 h-9 rounded-full bg-white border border-[var(--card-border)] flex items-center justify-center text-[var(--sidebar-end)] shadow-sm df-focus-ring"
+          >
+            <Search className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            aria-label="Calendar"
+            className="w-9 h-9 rounded-full bg-white border border-[var(--card-border)] flex items-center justify-center text-[var(--sidebar-end)] shadow-sm df-focus-ring"
+          >
+            <Calendar className="w-4 h-4" />
+          </button>
         </div>
-
-        <button
-          onClick={() => {
-            if (activeTab === "LEARNING") {
-              setIsAddingGoal(!isAddingGoal);
-            } else {
-              setIsAddingJob(!isAddingJob);
-            }
-          }}
-          className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-[#191D23] hover:bg-[#2C3440] text-white font-medium text-xs shadow-xs transition-all self-start sm:self-auto cursor-pointer"
-        >
-          <Plus className="w-4 h-4 stroke-[2.5]" />
-          <span>{activeTab === "LEARNING" ? "Add Learning Track" : "Add Job Target"}</span>
-        </button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-white border border-[#EAE5DC] w-fit">
-        <button
-          onClick={() => setActiveTab("LEARNING")}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-            activeTab === "LEARNING"
-              ? "bg-[#191D23] text-white shadow-xs"
-              : "text-[#787E86] hover:text-[#1A1D20]"
-          }`}
-        >
-          Skill Goals ({learningGoals.length})
-        </button>
-        <button
-          onClick={() => setActiveTab("JOBS")}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-            activeTab === "JOBS"
-              ? "bg-[#191D23] text-white shadow-xs"
-              : "text-[#787E86] hover:text-[#1A1D20]"
-          }`}
-        >
-          Career & Jobs ({jobApplications.length})
-        </button>
-      </div>
+      {/* Weekly learning goal */}
+      <section className="df-card rounded-[20px] p-4">
+        <div className="flex items-center justify-between mb-1.5">
+          <h2 className="text-[14px] font-bold text-[var(--sidebar-end)]">
+            Weekly Learning Goal
+          </h2>
+          <span className="text-[12px] font-bold text-[var(--sidebar)] tabular-nums">
+            {weeklyHours.done} / {weeklyHours.total} hrs
+          </span>
+        </div>
+        <div className="h-2.5 rounded-full bg-[#eef2ee] overflow-hidden mb-2 df-progress-bar">
+          <span
+            className="block h-full rounded-full bg-[var(--sidebar)]"
+            style={{ width: `${weeklyPct}%` }}
+          />
+        </div>
+        <p className="text-[12px] text-[var(--foreground-muted)] font-medium">
+          {weeklyHours.total - weeklyHours.done} hrs left this week — keep the streak.
+        </p>
+      </section>
 
-      {/* Add Learning Goal Form */}
-      {isAddingGoal && activeTab === "LEARNING" && (
-        <form
-          onSubmit={handleCreateGoal}
-          className="bg-white p-5 rounded-3xl border border-[#EAE5DC] space-y-4 shadow-sm animate-in fade-in"
-        >
-          <h3 className="text-sm font-bold text-[#1A1D20]">Add New Learning Track</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <input
-              type="text"
-              placeholder="e.g. Next.js 16 Server Components & Turbopack"
-              value={goalTitle}
-              onChange={(e) => setGoalTitle(e.target.value)}
-              className="w-full px-3 py-1.5 rounded-xl bg-[#F9F7F3] border border-[#EAE5DC] text-xs text-[#1A1D20] focus:outline-none focus:border-[#191D23]"
-              required
-            />
-            <input
-              type="text"
-              placeholder="Platform / Source (e.g. Documentation, Course)"
-              value={goalPlatform}
-              onChange={(e) => setGoalPlatform(e.target.value)}
-              className="w-full px-3 py-1.5 rounded-xl bg-[#F9F7F3] border border-[#EAE5DC] text-xs text-[#1A1D20] focus:outline-none"
-            />
-            <input
-              type="number"
-              placeholder="Target hours / week"
-              value={goalHours}
-              onChange={(e) => setGoalHours(e.target.value)}
-              className="w-full px-3 py-1.5 rounded-xl bg-[#F9F7F3] border border-[#EAE5DC] text-xs text-[#1A1D20] focus:outline-none"
-            />
-          </div>
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setIsAddingGoal(false)}
-              className="px-3 py-1.5 rounded-xl text-xs text-[#787E86]"
+      {/* Learning cards */}
+      <section className="space-y-2.5">
+        <h2 className="text-[14px] font-bold text-[var(--sidebar-end)] px-0.5">
+          My Learning &amp; Growth
+        </h2>
+        <div className="space-y-2.5">
+          {learningCards.map((card) => (
+            <article
+              key={card._id}
+              className="df-card rounded-[18px] p-3.5 flex items-start gap-3"
             >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 rounded-xl bg-[#191D23] hover:bg-[#2C3440] text-white text-xs font-semibold shadow-xs cursor-pointer"
-            >
-              Save Track
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* Learning Goals Grid */}
-      {activeTab === "LEARNING" && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-          {learningGoals.map((goal) => (
-            <div
-              key={goal._id}
-              className="p-5 rounded-3xl bg-white border border-[#EAE5DC] hover:border-[#D9D3C7] shadow-xs flex flex-col justify-between space-y-4 transition-all"
-            >
-              <div>
-                <div className="flex items-start justify-between gap-2">
-                  <h4 className="text-sm font-bold text-[#1A1D20]">
-                    {goal.title}
-                  </h4>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#E6EDE3] text-[#2F4D2E] font-medium">
-                    {goal.platformOrCourse || "Self-study"}
+              <div className="w-10 h-10 rounded-xl bg-[var(--accent-mint)] text-[var(--sidebar)] flex items-center justify-center shrink-0">
+                <BookOpen className="w-4.5 h-4.5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <h3 className="text-[13px] font-bold text-[var(--sidebar-end)] truncate">
+                    {card.title}
+                  </h3>
+                  <span className="text-[11px] font-bold text-[var(--sidebar)] tabular-nums shrink-0">
+                    {card.progress}%
                   </span>
                 </div>
-
-                <div className="mt-4">
-                  <div className="flex items-center justify-between text-xs font-bold text-[#1A1D20] mb-1.5">
-                    <span>Mastery Progress</span>
-                    <span>{goal.progressPercentage}%</span>
-                  </div>
-                  <div className="w-full bg-[#EFECE5] h-2 rounded-full overflow-hidden">
-                    <div
-                      className="bg-[#191D23] h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${goal.progressPercentage}%` }}
-                    />
-                  </div>
+                <div className="h-1.5 rounded-full bg-[#eef2ee] overflow-hidden mb-1.5 df-progress-bar">
+                  <span
+                    className="block h-full rounded-full bg-[var(--sidebar)]"
+                    style={{ width: `${card.progress}%` }}
+                  />
                 </div>
+                <p className="text-[11px] text-[var(--foreground-muted)] font-medium">
+                  {card.lessons}
+                </p>
               </div>
-
-              <div className="flex items-center justify-between pt-3 border-t border-[#EAE5DC]">
-                <div className="flex items-center gap-1.5">
-                  {[25, 50, 75, 100].map((pct) => (
-                    <button
-                      key={pct}
-                      onClick={() => handleUpdateProgress(goal._id, pct)}
-                      className={`text-[10px] px-2 py-0.5 rounded-lg border transition-all ${
-                        goal.progressPercentage >= pct
-                          ? "bg-[#191D23] text-white border-[#191D23]"
-                          : "border-[#EAE5DC] text-[#787E86] hover:bg-[#F5F2EB]"
-                      }`}
-                    >
-                      {pct}%
-                    </button>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() => handleDeleteItem(goal._id, "learning")}
-                  className="p-1 text-[#A0A6AF] hover:text-[#C4382B]"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
+            </article>
           ))}
         </div>
-      )}
+      </section>
 
-      {/* Jobs Tab */}
-      {activeTab === "JOBS" && (
-        <div className="space-y-3">
-          {jobApplications.length === 0 ? (
-            <div className="bg-white p-8 rounded-3xl border border-[#EAE5DC] text-center text-xs text-[#787E86]">
-              No job applications tracked yet.
-            </div>
-          ) : (
-            jobApplications.map((job) => (
-              <div
-                key={job._id}
-                className="p-4 rounded-3xl bg-white border border-[#EAE5DC] hover:border-[#D9D3C7] shadow-xs flex items-center justify-between gap-3 transition-all"
+      {/* Daily habits */}
+      <section className="df-card rounded-[20px] p-4 space-y-2.5">
+        <h2 className="text-[14px] font-bold text-[var(--sidebar-end)]">
+          Daily Habits
+        </h2>
+        {habitRows.map((habit) => (
+          <button
+            key={habit._id}
+            type="button"
+            onClick={() => toggleHabit(habit._id)}
+            className="w-full flex items-center gap-3 py-1.5 text-left cursor-pointer df-focus-ring rounded-xl"
+          >
+            <span
+              className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all ${
+                habit.done
+                  ? "bg-[var(--sidebar)] text-white df-check-pop"
+                  : "border border-[#b7c4b8] bg-white"
+              }`}
+            >
+              {habit.done && <Check className="w-3 h-3 stroke-[3]" />}
+            </span>
+            <span
+              className={`flex-1 min-w-0 text-[13px] font-semibold truncate ${
+                habit.done
+                  ? "text-[var(--foreground-subtle)] line-through"
+                  : "text-[var(--sidebar-end)]"
+              }`}
+            >
+              {habit.name}
+            </span>
+            <span className="flex items-center gap-1 text-[11px] font-bold text-[#d9822b] shrink-0">
+              <Flame className="w-3.5 h-3.5" />
+              {habit.streak}d
+            </span>
+          </button>
+        ))}
+      </section>
+
+      {/* Inbox & notes */}
+      <section className="df-card rounded-[20px] p-4 space-y-3">
+        <h2 className="text-[14px] font-bold text-[var(--sidebar-end)]">
+          My Inbox &amp; Notes
+        </h2>
+        <form onSubmit={handleCapture} className="relative">
+          <input
+            value={capture}
+            onChange={(e) => setCapture(e.target.value)}
+            placeholder="Quick capture..."
+            className="w-full h-10 pl-3.5 pr-10 rounded-xl bg-[var(--background)] border border-[var(--card-border)] text-[13px] outline-none focus:border-[#b7cbb7] focus:ring-2 focus:ring-[var(--accent-sage)]/40"
+          />
+          <button
+            type="submit"
+            aria-label="Add note"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-[var(--sidebar)] text-white flex items-center justify-center df-focus-ring"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </form>
+        <ul className="space-y-2">
+          {noteRows.map((note) => (
+            <li key={note._id}>
+              <button
+                type="button"
+                onClick={() => toggleNote(note._id)}
+                className="w-full flex items-center gap-3 text-left cursor-pointer df-focus-ring rounded-lg"
               >
-                <div>
-                  <h4 className="text-sm font-bold text-[#1A1D20]">
-                    {job.role} @ {job.company}
-                  </h4>
-                  <p className="text-[11px] text-[#787E86] mt-0.5">
-                    {job.location} • Applied {new Date(job.appliedDate).toLocaleDateString()}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#E6EDE3] text-[#2F4D2E] font-semibold">
-                    {job.status}
-                  </span>
-                  <button
-                    onClick={() => handleDeleteItem(job._id, "job")}
-                    className="p-1 text-[#A0A6AF] hover:text-[#C4382B]"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
+                <span
+                  className={`w-4.5 h-4.5 rounded-[5px] flex items-center justify-center shrink-0 ${
+                    note.done
+                      ? "bg-[var(--sidebar)] text-white"
+                      : "border border-[#b7c4b8]"
+                  }`}
+                >
+                  {note.done && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                </span>
+                <span
+                  className={`text-[12px] font-medium ${
+                    note.done
+                      ? "text-[var(--foreground-subtle)] line-through"
+                      : "text-[var(--sidebar-end)]"
+                  }`}
+                >
+                  {note.title}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   );
 }

@@ -1,72 +1,97 @@
 @import "tailwindcss";
 
 :root {
-  --background: #F7F5F0;
-  --background-secondary: #EFECE4;
-  --foreground: #1A1D20;
-  --foreground-muted: #6E737B;
-  --foreground-subtle: #9EA3A9;
-  
-  --card-bg: #FFFFFF;
-  --card-border: #EAE5DC;
-  --card-border-hover: #DCD6CC;
-  
-  --primary-dark: #191D23;
-  --primary-dark-hover: #2A303A;
-  
-  --accent-sage: #E8EFE6;
-  --accent-sage-dark: #2F4D2E;
-  --accent-sage-border: #D2E0CF;
-  
-  --accent-sand: #F3ECE2;
-  --accent-terracotta: #C46849;
-  --accent-amber: #D9822B;
+  --background: #f6f5ee;
+  --background-elevated: #fbfaf6;
+  --foreground: #1a241c;
+  --foreground-muted: #6b756f;
+  --foreground-subtle: #8a948e;
+
+  --card-bg: #ffffff;
+  --card-border: #e6e8e0;
+  --card-border-hover: #d2ddd2;
+  --card-radius: 18px;
+  --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  --card-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.08);
+
+  --sidebar: #1f4d36;
+  --sidebar-end: #16372a;
+  --sidebar-soft: #245a40;
+  --sidebar-muted: #8aa090;
+  --sidebar-active: #ddebc8;
+  --sidebar-active-text: #16372a;
+
+  --primary: #2e7d32;
+  --primary-hover: #256628;
+  --accent-sage: #ddebc8;
+  --accent-sage-deep: #3d6b48;
+  --accent-mint: #eef5ee;
+  --alert: #d64545;
+  --alert-soft: #fdeceb;
+  --warning: #d9822b;
+  --warning-soft: #fff1e8;
+  --paid: #2e7d32;
+  --paid-soft: #e6f0e7;
+
+  --sidebar-width: 260px;
+  --font-display: var(--font-display), Georgia, "Times New Roman", serif;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card-bg);
+  --color-sidebar: var(--sidebar);
+  --color-primary: var(--primary);
+  --color-sage: var(--accent-sage);
+  --color-alert: var(--alert);
+  --color-warning: var(--warning);
+  --radius-card: var(--card-radius);
+  --shadow-card: var(--card-shadow);
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
-  background-image: 
-    radial-gradient(at 10% 10%, rgba(235, 230, 220, 0.6) 0px, transparent 40%),
-    radial-gradient(at 90% 90%, rgba(232, 239, 230, 0.5) 0px, transparent 40%);
-  background-attachment: fixed;
 }
 
-/* Handwritten script text */
+.font-display {
+  font-family: var(--font-display);
+}
+
 .font-handwriting {
-  font-family: var(--font-handwriting), "Caveat", "Comic Sans MS", cursive;
+  font-family: var(--font-handwriting), "Caveat", cursive;
 }
 
-/* Warm card styling */
-.theme-card {
-  background: #FFFFFF;
+.df-card {
+  background: var(--card-bg);
   border: 1px solid var(--card-border);
-  box-shadow: 0 4px 20px -2px rgba(25, 29, 35, 0.04), 0 2px 6px -1px rgba(25, 29, 35, 0.02);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: var(--card-shadow);
+  border-radius: var(--card-radius);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease,
+    background-color 0.2s ease;
 }
 
-.theme-card:hover {
+.df-card:hover {
   border-color: var(--card-border-hover);
-  box-shadow: 0 8px 26px -4px rgba(25, 29, 35, 0.07);
+  box-shadow: var(--card-shadow-hover);
 }
 
-.theme-card-interactive:hover {
+.df-card-lift:hover {
   transform: translateY(-2px);
 }
 
-/* Floating Navigation Island */
-.nav-island {
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(232, 227, 218, 0.85);
-  box-shadow: 0 10px 30px -4px rgba(25, 29, 35, 0.08), 0 4px 10px -2px rgba(25, 29, 35, 0.04);
+.df-focus-ring:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
-/* Hide scrollbar for clean horizontal swipe */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -75,28 +100,234 @@ body {
   scrollbar-width: none;
 }
 
-/* Elegant warm scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(235, 230, 220, 0.5);
+  background: rgba(31, 77, 54, 0.04);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(180, 175, 165, 0.45);
+  background: rgba(31, 77, 54, 0.18);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(140, 135, 125, 0.65);
+  background: rgba(31, 77, 54, 0.32);
 }
 
-/* Custom subtle animations */
-@keyframes subtleFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+/* --- Motion --- */
+@keyframes df-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.animate-subtle-float {
-  animation: subtleFloat 4s ease-in-out infinite;
+@keyframes df-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes df-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes df-slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes df-progress-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes df-draw-ring {
+  from {
+    stroke-dashoffset: var(--ring-circumference);
+  }
+  to {
+    stroke-dashoffset: var(--ring-offset);
+  }
+}
+
+@keyframes df-check-pop {
+  0% {
+    transform: scale(0.6);
+  }
+  60% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes df-strikethrough {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes df-bell-ring {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  15% {
+    transform: rotate(14deg);
+  }
+  30% {
+    transform: rotate(-12deg);
+  }
+  45% {
+    transform: rotate(10deg);
+  }
+  60% {
+    transform: rotate(-6deg);
+  }
+  75% {
+    transform: rotate(3deg);
+  }
+}
+
+@keyframes df-accordion-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-df-fade-up {
+  animation: df-fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-df-fade-in {
+  animation: df-fade-in 0.35s ease both;
+}
+
+.animate-df-scale-in {
+  animation: df-scale-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-df-slide-right {
+  animation: df-slide-right 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.df-stagger > * {
+  animation: df-fade-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.df-stagger > *:nth-child(1) {
+  animation-delay: 40ms;
+}
+.df-stagger > *:nth-child(2) {
+  animation-delay: 90ms;
+}
+.df-stagger > *:nth-child(3) {
+  animation-delay: 140ms;
+}
+.df-stagger > *:nth-child(4) {
+  animation-delay: 190ms;
+}
+.df-stagger > *:nth-child(5) {
+  animation-delay: 240ms;
+}
+.df-stagger > *:nth-child(6) {
+  animation-delay: 290ms;
+}
+.df-stagger > *:nth-child(7) {
+  animation-delay: 340ms;
+}
+
+.df-progress-bar > span {
+  transform-origin: left center;
+  animation: df-progress-fill 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.df-ring-animate {
+  animation: df-draw-ring 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.df-check-pop {
+  animation: df-check-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.df-strike {
+  position: relative;
+}
+.df-strike::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 1.5px;
+  background: currentColor;
+  animation: df-strikethrough 0.28s ease forwards;
+}
+
+.df-bell-ring {
+  animation: df-bell-ring 0.7s ease;
+  transform-origin: top center;
+}
+
+.nav-island {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(228, 235, 228, 0.9);
+  box-shadow: 0 10px 30px -4px rgba(22, 55, 42, 0.1),
+    0 4px 10px -2px rgba(22, 55, 42, 0.05);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-df-fade-up,
+  .animate-df-fade-in,
+  .animate-df-scale-in,
+  .animate-df-slide-right,
+  .df-stagger > *,
+  .df-progress-bar > span,
+  .df-ring-animate,
+  .df-check-pop,
+  .df-bell-ring,
+  .df-strike::after {
+    animation: none !important;
+  }
+
+  .df-card,
+  .df-card-lift:hover {
+    transition: none !important;
+    transform: none !important;
+  }
 }

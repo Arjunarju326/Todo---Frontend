@@ -1,23 +1,30 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Bell,
-  ArrowRight,
-  ChevronRight,
-  Check,
-  CheckCircle2,
-  Clock,
-  Sparkles,
-  ExternalLink,
-  Plus,
-  Compass,
-  Layers,
+  Search,
+  ChevronDown,
+  CheckSquare,
+  AlertTriangle,
   Calendar,
-  Flame,
-  TrendingUp,
+  Coins,
+  BarChart3,
+  Wifi,
+  Smartphone,
+  Tv,
+  Check,
 } from "lucide-react";
 import { NavTab } from "./Navbar";
+import StatCard from "./dashboard/StatCard";
+import FocusList, { FocusTask } from "./dashboard/FocusList";
+import DonutCard from "./dashboard/DonutCard";
+import LearningProgress from "./dashboard/LearningProgress";
+import PaymentCard from "./dashboard/PaymentCard";
+import ScheduleTimeline from "./dashboard/ScheduleTimeline";
+import HabitStreak from "./dashboard/HabitStreak";
+import QuickNotes from "./dashboard/QuickNotes";
+import DayProgressRing from "./dashboard/DayProgressRing";
 
 interface DashboardProps {
   data: any;
@@ -27,434 +34,493 @@ interface DashboardProps {
   onOpenQuickAdd?: () => void;
 }
 
-interface ProjectCard {
-  id: string;
-  title: string;
-  subtitle: string;
-  badge: string;
-  badgeColor?: string;
-  image: string;
-  progress: number;
-}
-
 export default function DashboardView({
   data,
   onNavigate,
   onTaskToggle,
-  onRefresh,
   onOpenQuickAdd,
 }: DashboardProps) {
   const stats = data?.stats || {};
-  const settings = data?.settings || { userName: "Shihab", currency: "₹" };
+  const settings = data?.settings || { userName: "Arjun", currency: "₹" };
+  const userName = settings.userName || "Arjun";
+  const currency = settings.currency || "₹";
   const dailyQuestions = data?.dailyQuestions || {};
 
-  // Greeting based on current time
-  const currentHour = new Date().getHours();
-  const timeGreeting =
-    currentHour < 12
-      ? "Good morning"
-      : currentHour < 17
-      ? "Good afternoon"
-      : "Good evening";
-
-  // Demo projects matching screenshot
-  const projects: ProjectCard[] = [
-    {
-      id: "proj-1",
-      title: "ScanSafe",
-      subtitle: "QR Scanner App",
-      badge: "In progress",
-      image: "/images/scansafe.jpg",
-      progress: 75,
-    },
-    {
-      id: "proj-2",
-      title: "Lumina",
-      subtitle: "AI Chat App",
-      badge: "In progress",
-      badgeColor: "sage",
-      image: "/images/lumina.jpg",
-      progress: 45,
-    },
-    {
-      id: "proj-3",
-      title: "Book Wise",
-      subtitle: "React Reader App",
-      badge: "In progress",
-      image: "/images/hero-mist.jpg",
-      progress: 20,
-    },
-  ];
-
-  // Dynamic or starter tasks for "Today's Tasks"
-  const liveTodayTasks = dailyQuestions?.finishToday?.items || [];
-  const defaultTodayTasks = [
-    {
-      id: "task-demo-1",
-      title: "Finish A4 JS functions assignment",
-      category: "Programming Hero",
-      time: "10:00 AM",
-      status: "DONE",
-    },
-    {
-      id: "task-demo-2",
-      title: "React Customer Support Zone",
-      category: "Course",
-      time: "2:00 PM",
-      status: "TODO",
-    },
-    {
-      id: "task-demo-3",
-      title: "Design system planning",
-      category: "Work",
-      time: "5:30 PM",
-      status: "TODO",
-    },
-  ];
-
-  // Combine live tasks with sample tasks if live tasks are empty
-  const [localTaskStates, setLocalTaskStates] = useState<Record<string, boolean>>({
-    "task-demo-1": true,
-    "task-demo-2": false,
-    "task-demo-3": false,
+  const [search, setSearch] = useState("");
+  const [bellRing, setBellRing] = useState(false);
+  const [localDone, setLocalDone] = useState<Record<string, boolean>>({
+    "focus-1": true,
+    "focus-2": false,
+    "focus-3": false,
+    "focus-4": true,
+    "focus-5": true,
   });
+  const [greeting, setGreeting] = useState("Good morning");
+  const [dateLabel, setDateLabel] = useState("Tue, 03 Nov 2026");
 
-  const handleToggle = (task: any) => {
-    if (task.id?.startsWith("task-demo-")) {
-      setLocalTaskStates((prev) => ({
-        ...prev,
-        [task.id]: !prev[task.id],
+  useEffect(() => {
+    const now = new Date();
+    const hour = now.getHours();
+    setGreeting(
+      hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"
+    );
+    setDateLabel(
+      now.toLocaleDateString("en-GB", {
+        weekday: "short",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    );
+
+    const t = setTimeout(() => setBellRing(true), 900);
+    const clear = setTimeout(() => setBellRing(false), 1800);
+    return () => {
+      clearTimeout(t);
+      clearTimeout(clear);
+    };
+  }, []);
+
+  const liveTasks = dailyQuestions?.finishToday?.items || [];
+
+  const focusTasks: FocusTask[] = useMemo(() => {
+    if (liveTasks.length > 0) {
+      return liveTasks.slice(0, 5).map((t: any, i: number) => ({
+        id: t.id || t._id || `live-${i}`,
+        title: t.title,
+        category: t.category || "Work",
+        priority: i === 0 ? ("High" as const) : undefined,
+        time:
+          t.time ||
+          ["11:30 AM", "2:00 PM", "4:30 PM", "6:00 PM", "8:00 PM"][i] ||
+          "Today",
+        done: t.status === "DONE",
       }));
+    }
+    return [
+      {
+        id: "focus-1",
+        title: "Complete e-commerce UI fixes",
+        category: "Work",
+        time: "11:30 AM",
+        done: true,
+      },
+      {
+        id: "focus-2",
+        title: "Push staging build & test",
+        category: "Work",
+        priority: "High" as const,
+        time: "2:00 PM",
+        done: false,
+      },
+      {
+        id: "focus-3",
+        title: "AI course — Lesson 4 (Gradient Descent)",
+        category: "Learning",
+        time: "7:00 PM",
+        done: false,
+      },
+      {
+        id: "focus-4",
+        title: "Gym — Workout (Lower body)",
+        category: "Health",
+        time: "6:00 PM",
+        done: true,
+      },
+      {
+        id: "focus-5",
+        title: "Review weekly budget",
+        category: "Finance",
+        time: "8:30 PM",
+        done: true,
+      },
+    ];
+  }, [liveTasks]);
+
+  const isDone = (task: FocusTask) =>
+    task.id.startsWith("focus-") ? !!localDone[task.id] : task.done;
+
+  const completedFocus = focusTasks.filter((t) => isDone(t)).length;
+  const focusTotal = Math.max(focusTasks.length, 5);
+  const visibleFocus = focusTasks.slice(0, 3);
+
+  const dueToday = stats.dueTodayCount ?? stats.todayTasks ?? 5;
+  const overdue = stats.overdueCount ?? 2;
+  const upcoming = stats.upcomingCount ?? 8;
+  const balance = stats.netBalance ?? 10500;
+  const spent = stats.totalExpense ?? 4500;
+  const taskPercent = stats.taskCompletionRate ?? 72;
+  const tasksDone = stats.completedCount ?? 12;
+  const tasksTotal = stats.totalTasks ?? 17;
+
+  const moneySegments = [
+    { value: 40, color: "#1f4d36", label: "Essentials", pct: "40%", amount: "₹1,800" },
+    { value: 30, color: "#2e7d32", label: "Bills & EMI", pct: "30%", amount: "₹1,350" },
+    { value: 17, color: "#7cb342", label: "Food", pct: "17%", amount: "₹750" },
+    { value: 13, color: "#c5d9c5", label: "Others", pct: "13%", amount: "₹600" },
+  ];
+
+  const categoryProgress = [
+    { label: "Work", done: 6, total: 8, color: "#1f4d36" },
+    { label: "Learning", done: 3, total: 4, color: "#2e7d32" },
+    { label: "Personal", done: 2, total: 3, color: "#66a06f" },
+    { label: "Finance", done: 1, total: 2, color: "#a3c4a8" },
+  ];
+
+  const taskSegments = categoryProgress.map((c) => ({
+    value: c.done,
+    color: c.color,
+    label: c.label,
+  }));
+
+  const schedule = [
+    { time: "11:30 AM", title: "Complete e-commerce UI fixes", tag: "Work", color: "#2e7d32" },
+    { time: "2:00 PM", title: "Push staging build & test", tag: "Work", color: "#d9822b" },
+    { time: "6:00 PM", title: "Gym – Workout (Lower body)", tag: "Health", color: "#2e7d32" },
+    { time: "7:00 PM", title: "AI course – Lesson 4", tag: "Learning", color: "#3b82c4" },
+  ];
+
+  const payments = [
+    {
+      title: "Internet bill",
+      amount: 899,
+      due: "Due Tomorrow, 04 Nov",
+      status: "Due Soon",
+      statusTone: "warning" as const,
+      icon: Wifi,
+    },
+    {
+      title: "Phone EMI",
+      amount: 4500,
+      due: "Due 07 Nov",
+      status: "Upcoming",
+      statusTone: "muted" as const,
+      icon: Smartphone,
+    },
+    {
+      title: "OTT Subscription",
+      amount: 299,
+      due: "Due 10 Nov",
+      status: "Paid",
+      statusTone: "success" as const,
+      icon: Tv,
+    },
+  ];
+
+  const handleFocusToggle = (task: FocusTask) => {
+    if (task.id.startsWith("focus-")) {
+      setLocalDone((prev) => ({ ...prev, [task.id]: !prev[task.id] }));
     } else {
-      onTaskToggle(task.id, task.status);
+      onTaskToggle(task.id, task.done ? "DONE" : "TODO");
     }
   };
 
-  const tasksToDisplay =
-    liveTodayTasks.length > 0
-      ? liveTodayTasks.map((t: any) => ({
-          id: t.id || t._id,
-          title: t.title,
-          category: t.category || "General",
-          time: "Today",
-          status: t.status || "TODO",
-        }))
-      : defaultTodayTasks;
-
   return (
-    <div className="relative max-w-4xl mx-auto pb-28 md:pb-16 px-1 md:px-4 space-y-6">
-      {/* Top Header Row (Handwritten quote, greeting, avatar, bell) */}
-      <div className="pt-2">
-        <div className="flex items-center justify-between mb-2">
-          {/* Handwritten Quote from top left of Screenshot */}
-          <div className="font-handwriting text-lg md:text-xl font-bold text-[#434A52] tracking-wide rotate-[-2deg] select-none">
-            Small steps Big results ✈️
-          </div>
+    <div className="w-full pb-16 md:pb-4">
+      {/* Desktop header */}
+      <header className="hidden md:flex items-center justify-between gap-4 mb-3.5 animate-df-fade-up">
+        <div className="min-w-0">
+          <h1 className="font-display text-[24px] font-bold text-[var(--sidebar-end)] tracking-tight leading-none">
+            Dashboard
+          </h1>
+          <p className="text-[12px] text-[var(--foreground-muted)] mt-1 font-medium">
+            Your life at a glance
+          </p>
+        </div>
 
-          {/* Top Right Bell & Avatar (Visible on tablet/desktop, mobile has in header) */}
-          <div className="hidden md:flex items-center gap-3">
-            <button
-              onClick={() => onNavigate("settings")}
-              className="w-10 h-10 rounded-full bg-white border border-[#EAE5DC] flex items-center justify-center text-[#444B53] relative hover:bg-[#F5F2EB] transition-colors shadow-xs cursor-pointer"
-            >
-              <Bell className="w-4 h-4" />
-              <span className="w-2 h-2 rounded-full bg-[#D97706] absolute top-2 right-2 ring-2 ring-white" />
-            </button>
-            <div
-              onClick={() => onNavigate("settings")}
-              className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-xs cursor-pointer bg-[#EAE5DC]"
-            >
+        <div className="w-full max-w-[380px]">
+          <label className="relative block group">
+            <span className="sr-only">Search tasks, notes, bills</span>
+            <Search
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--foreground-subtle)] transition-colors group-focus-within:text-[var(--sidebar)]"
+              aria-hidden
+            />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search tasks, notes, bills..."
+              className="w-full h-9 pl-10 pr-4 rounded-full bg-white border border-[var(--card-border)] text-[13px] text-[var(--sidebar-end)] placeholder:text-[var(--foreground-subtle)] outline-none shadow-xs transition-all duration-200 focus:border-[#b7cbb7] focus:ring-2 focus:ring-[var(--accent-sage)]/40"
+            />
+          </label>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 min-w-0">
+          <button
+            type="button"
+            onClick={() => onNavigate("settings")}
+            aria-label="Notifications"
+            className="relative w-9 h-9 rounded-full bg-white border border-[var(--card-border)] flex items-center justify-center text-[var(--sidebar-end)] hover:bg-[var(--accent-mint)] hover:border-[#c5d9c5] transition-all duration-150 cursor-pointer df-focus-ring"
+          >
+            <Bell className={`w-4 h-4 ${bellRing ? "df-bell-ring" : ""}`} />
+            <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-[var(--alert)] ring-2 ring-white" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate("settings")}
+            className="flex items-center gap-2 pl-1.5 pr-3 py-1 rounded-full bg-white border border-[var(--card-border)] hover:border-[#c5d9c5] hover:bg-[var(--accent-mint)] transition-all duration-150 cursor-pointer df-focus-ring"
+          >
+            <div className="w-7 h-7 rounded-full overflow-hidden bg-[var(--accent-mint)] shrink-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/images/avatar.jpg"
-                alt="Avatar"
+                alt=""
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = "none";
                 }}
               />
             </div>
-          </div>
+            <div className="text-left leading-tight">
+              <p className="text-[12px] font-semibold text-[var(--sidebar-end)]">
+                {userName}{" "}
+                <span className="text-[var(--foreground-subtle)] font-medium">
+                  / Personal Workspace
+                </span>
+              </p>
+            </div>
+            <ChevronDown
+              className="w-3.5 h-3.5 text-[var(--foreground-subtle)]"
+              aria-hidden
+            />
+          </button>
+        </div>
+      </header>
+
+      {/* Desktop layout */}
+      <div className="hidden md:grid grid-cols-1 min-[1140px]:grid-cols-[minmax(0,1fr)_290px] gap-3">
+        <div className="space-y-3 min-w-0">
+          {/* Hero */}
+          <section className="relative overflow-hidden rounded-[18px] min-h-[96px] border border-[var(--card-border)] shadow-xs group">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/hero-sunrise.jpg"
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#f6f5ee]/92 via-[#f6f5ee]/70 to-transparent" />
+            <div className="relative z-10 px-6 py-4 flex flex-col justify-center min-h-[96px]">
+              <h2 className="font-display text-[22px] md:text-[24px] font-bold text-[var(--sidebar-end)] tracking-tight">
+                {greeting}, {userName} 👋
+              </h2>
+              <p className="text-[12px] text-[var(--foreground-muted)] mt-0.5 max-w-lg font-medium">
+                Stay focused, organized and make progress today.
+              </p>
+            </div>
+          </section>
+
+          {/* Stats: 4 side-by-side */}
+          <section className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <StatCard label="Tasks Due Today" value={Number(dueToday)} icon={CheckSquare} />
+            <StatCard
+              label="Overdue"
+              value={Number(overdue)}
+              icon={AlertTriangle}
+              tone="danger"
+            />
+            <StatCard label="Upcoming" value={Number(upcoming)} icon={Calendar} />
+            <StatCard
+              label="Available Balance"
+              value={Number(balance)}
+              icon={Coins}
+              format={(n) => `${currency}${n.toLocaleString("en-IN")}`}
+            />
+          </section>
+
+          {/* Row 3: Today's Focus & My Money Overview */}
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-stretch">
+            <FocusList
+              tasks={visibleFocus}
+              completed={completedFocus}
+              total={focusTotal}
+              onToggle={handleFocusToggle}
+              onViewAll={() => onNavigate("tasks")}
+              isDone={isDone}
+            />
+
+            <DonutCard
+              title="My Money Overview"
+              icon={Coins}
+              periodLabel="This Month"
+              segments={moneySegments}
+              centerPrimary={`${currency}${Number(spent).toLocaleString("en-IN")}`}
+              centerSecondary="Total Spent"
+              legend={moneySegments.map((s) => ({
+                label: s.label,
+                color: s.color,
+                pct: s.pct,
+                amount: s.amount,
+              }))}
+              footerLabel="View Details →"
+              onFooter={() => onNavigate("finance")}
+              onPeriodClick={() => onNavigate("finance")}
+              delay="160ms"
+            />
+          </section>
+
+          {/* Row 4: Task Progress & Learning Progress */}
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-stretch">
+            <DonutCard
+              title="Task Progress"
+              icon={BarChart3}
+              periodLabel="This Week"
+              segments={taskSegments}
+              centerPrimary={`${Math.round(taskPercent)}%`}
+              centerSecondary={`${tasksDone} of ${tasksTotal} tasks`}
+              legend={categoryProgress.map((c) => ({
+                label: c.label,
+                color: c.color,
+                pct: `${c.done}/${c.total}`,
+              }))}
+              footerLabel="View All Tasks →"
+              onFooter={() => onNavigate("tasks")}
+              onPeriodClick={() => onNavigate("tasks")}
+              delay="200ms"
+            />
+
+            <LearningProgress onContinue={() => onNavigate("growth")} />
+          </section>
+
+          {/* Row 5: Upcoming Payments & EMIs */}
+          <PaymentCard
+            payments={payments}
+            currency={currency}
+            onViewAll={() => onNavigate("finance")}
+          />
         </div>
 
-        {/* Greeting and Subtitle */}
+        <aside
+          className="space-y-3 animate-df-fade-up min-[1140px]:sticky min-[1140px]:top-3 min-[1140px]:self-start"
+          style={{ animationDelay: "140ms" }}
+        >
+          <ScheduleTimeline
+            dateLabel={dateLabel}
+            items={schedule}
+            onSelect={() => onNavigate("schedule")}
+          />
+          <HabitStreak onViewAll={() => onNavigate("habits")} />
+          <QuickNotes onAdd={onOpenQuickAdd} onViewAll={() => onNavigate("inbox")} />
+        </aside>
+      </div>
+
+      {/* Mobile — My Day */}
+      <div className="md:hidden space-y-4 animate-df-fade-up pb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-[#1A1D20] tracking-tight flex items-center gap-1.5">
-            {timeGreeting}, <span className="text-[#191D23]">{settings.userName || "Shihab"}</span> 👋
+          <h1 className="font-display text-[26px] font-bold text-[var(--sidebar-end)] tracking-tight leading-tight">
+            {greeting}, {userName}
           </h1>
-          <p className="text-xs md:text-sm text-[#787E86] mt-1 font-medium">
-            Build what you love. One step at a time.
+          <p className="text-[13px] text-[var(--foreground-muted)] mt-1 font-medium">
+            {dateLabel}
           </p>
         </div>
-      </div>
 
-      {/* Featured Card ("This week: 3 / 5 projects") with Misty Mountain Landscape */}
-      <div className="relative rounded-3xl overflow-hidden shadow-md text-white min-h-[170px] md:min-h-[190px] flex flex-col justify-between p-5 md:p-6 group">
-        {/* Background Image */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/images/hero-mist.jpg"
-          alt="Misty Pine Forest"
-          className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 brightness-[0.7] contrast-[1.05]"
-        />
-        {/* Dark subtle gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
+        <DayProgressRing percent={Number(taskPercent)} size={124} stroke={11} />
 
-        {/* Top Content */}
-        <div className="relative z-10 flex items-start justify-between">
-          <div>
-            <span className="text-xs font-medium text-slate-300 uppercase tracking-wider">
-              This week
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={() => onNavigate("tasks")}
+            className="df-card rounded-[16px] px-2.5 py-3 text-center bg-[#fff6f6] border-[#fcd5d5] cursor-pointer df-focus-ring"
+          >
+            <p className="text-[22px] font-bold text-[var(--alert)] leading-none tabular-nums">
+              {Number(overdue)}
+            </p>
+            <p className="text-[11px] font-semibold text-[var(--alert)] mt-1.5">
+              Overdue
+            </p>
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate("tasks")}
+            className="df-card rounded-[16px] px-2.5 py-3 text-center cursor-pointer df-focus-ring"
+          >
+            <p className="text-[22px] font-bold text-[var(--sidebar-end)] leading-none tabular-nums">
+              {Number(dueToday)}
+            </p>
+            <p className="text-[11px] font-semibold text-[var(--foreground-muted)] mt-1.5">
+              Due Today
+            </p>
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate("tasks")}
+            className="df-card rounded-[16px] px-2.5 py-3 text-center cursor-pointer df-focus-ring"
+          >
+            <p className="text-[22px] font-bold text-[var(--sidebar-end)] leading-none tabular-nums">
+              {Number(upcoming)}
+            </p>
+            <p className="text-[11px] font-semibold text-[var(--foreground-muted)] mt-1.5">
+              Upcoming
+            </p>
+          </button>
+        </div>
+
+        <section className="rounded-[20px] bg-[var(--sidebar)] text-white p-4 shadow-[0_10px_28px_rgba(22,55,42,0.22)]">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[15px] font-bold tracking-tight">Today&apos;s Focus</h3>
+            <span className="text-[11px] font-medium text-[#c5d9c5]">
+              {completedFocus}/{focusTotal}
             </span>
-            <div className="text-2xl md:text-3xl font-extrabold mt-0.5 tracking-tight flex items-baseline gap-1.5">
-              <span>{stats.completedCount > 0 ? stats.completedCount : 3}</span>
-              <span className="text-slate-400 font-light">/</span>
-              <span>{stats.totalTasks > 0 ? stats.totalTasks : 5}</span>
-              <span className="text-xs md:text-sm font-normal text-slate-300 ml-1">
-                projects
-              </span>
-            </div>
           </div>
-
-          <button
-            onClick={() => onNavigate("tasks")}
-            className="flex items-center gap-1 text-xs font-semibold text-slate-200 hover:text-white transition-colors cursor-pointer bg-white/10 hover:bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full"
-          >
-            <span>Keep going</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* Bottom Progress Bar */}
-        <div className="relative z-10 w-full pt-4">
-          <div className="w-full bg-white/20 backdrop-blur-xs h-2 rounded-full overflow-hidden">
-            <div
-              className="bg-white h-2 rounded-full transition-all duration-700 shadow-sm"
-              style={{
-                width: `${stats.taskCompletionRate ? stats.taskCompletionRate : 60}%`,
-              }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Section: Current Projects */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between px-1">
-          <h2 className="text-base md:text-lg font-bold text-[#1A1D20]">
-            Current Projects
-          </h2>
-          <button
-            onClick={() => onNavigate("tasks")}
-            className="flex items-center gap-1 text-xs font-semibold text-[#6E737B] hover:text-[#1A1D20] cursor-pointer transition-colors"
-          >
-            <span>See all</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* Horizontal Scroll / Responsive Grid for Projects */}
-        <div className="flex gap-3 md:gap-4 overflow-x-auto no-scrollbar pb-1">
-          {projects.map((proj) => {
-            const isSageBadge = proj.badgeColor === "sage";
-            return (
-              <div
-                key={proj.id}
-                onClick={() => onNavigate("tasks")}
-                className="flex-shrink-0 w-[170px] md:w-[210px] bg-white border border-[#EAE5DC] hover:border-[#D9D3C7] rounded-3xl p-3.5 flex flex-col justify-between shadow-xs hover:shadow-sm transition-all cursor-pointer group"
-              >
-                {/* Image Preview Container */}
-                <div className="relative w-full h-24 md:h-28 rounded-2xl overflow-hidden bg-[#F2EFE8] mb-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={proj.image}
-                    alt={proj.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = "none";
-                    }}
-                  />
-                  {/* Status Pill Badge */}
-                  <div className="absolute top-2 left-2">
-                    <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold backdrop-blur-md shadow-xs ${
-                        isSageBadge
-                          ? "bg-[#E6EDE3]/90 text-[#2B472A] border border-[#CCDBC9]"
-                          : "bg-white/90 text-[#191D23] border border-white/50"
-                      }`}
-                    >
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          isSageBadge ? "bg-[#3D6938]" : "bg-[#2563EB]"
-                        }`}
-                      />
-                      {proj.badge}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Project Details */}
-                <div>
-                  <h3 className="text-sm font-bold text-[#1A1D20] truncate">
-                    {proj.title}
-                  </h3>
-                  <p className="text-[11px] text-[#787E86] truncate">
-                    {proj.subtitle}
-                  </p>
-
-                  {/* Progress Bar & Percentage */}
-                  <div className="mt-3">
-                    <div className="flex items-center justify-between text-[10px] font-bold text-[#1A1D20] mb-1">
-                      <span>{proj.progress}%</span>
-                    </div>
-                    <div className="w-full bg-[#EFECE5] h-1.5 rounded-full overflow-hidden">
-                      <div
-                        className="bg-[#191D23] h-1.5 rounded-full transition-all duration-500"
-                        style={{ width: `${proj.progress}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Section: Today's Tasks */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between px-1">
-          <h2 className="text-base md:text-lg font-bold text-[#1A1D20]">
-            Today&apos;s Tasks
-          </h2>
-          <span className="text-xs font-semibold text-[#7E848D]">
-            {tasksToDisplay.length} tasks
-          </span>
-        </div>
-
-        {/* Task List */}
-        <div className="space-y-2">
-          {tasksToDisplay.map((task: any) => {
-            const isCompleted =
-              task.id?.startsWith("task-demo-")
-                ? localTaskStates[task.id]
-                : task.status === "DONE";
-
-            return (
-              <div
-                key={task.id}
-                onClick={() => handleToggle(task)}
-                className="flex items-center justify-between p-3.5 md:p-4 rounded-2xl bg-white border border-[#EAE5DC] hover:border-[#D9D3C7] transition-all cursor-pointer shadow-xs group"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  {/* Round Checkbox (Matching screenshot) */}
-                  <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center transition-all shrink-0 ${
-                      isCompleted
-                        ? "bg-[#191D23] text-white border border-[#191D23]"
-                        : "border-2 border-[#CCD1D9] bg-transparent hover:border-[#191D23]"
-                    }`}
+          <ul className="space-y-2.5">
+            {visibleFocus.map((task) => {
+              const done = isDone(task);
+              return (
+                <li key={task.id}>
+                  <button
+                    type="button"
+                    onClick={() => handleFocusToggle(task)}
+                    aria-pressed={done}
+                    className="w-full flex items-center gap-3 text-left cursor-pointer df-focus-ring rounded-xl"
                   >
-                    {isCompleted && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                  </div>
-
-                  <div className="min-w-0">
-                    <p
-                      className={`text-sm font-semibold truncate transition-colors ${
-                        isCompleted
-                          ? "line-through text-[#8E949D]"
-                          : "text-[#1A1D20] group-hover:text-black"
+                    <span
+                      className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 border transition-all ${
+                        done
+                          ? "bg-[var(--sidebar-active)] border-[var(--sidebar-active)] text-[var(--sidebar-end)] df-check-pop"
+                          : "border-[#8aa090] bg-transparent"
+                      }`}
+                      aria-hidden
+                    >
+                      {done && <Check className="w-3 h-3 stroke-[3]" />}
+                    </span>
+                    <span
+                      className={`flex-1 min-w-0 text-[13px] font-medium truncate ${
+                        done ? "text-[#8aa090] line-through" : "text-white"
                       }`}
                     >
                       {task.title}
-                    </p>
-                    <p className="text-[11px] text-[#787E86] mt-0.5">
-                      {task.category} • {task.time}
-                    </p>
-                  </div>
-                </div>
+                    </span>
+                    <span className="text-[11px] text-[#a8bbae] font-medium shrink-0">
+                      {task.time}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
 
-                <ChevronRight className="w-4 h-4 text-[#A0A6AF] group-hover:text-[#1A1D20] transition-colors shrink-0" />
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Handwritten "Better than yesterday" Note & Underlying Doodle */}
-        <div className="pt-3 pb-2 flex items-center justify-between px-1">
-          <div className="rotate-[-3deg] select-none">
-            <span className="font-handwriting text-base md:text-lg font-bold text-[#444A52] leading-tight block">
-              Better than yesterday
-            </span>
-            <div className="w-20 h-0.5 bg-[#444A52]/40 rounded-full mt-0.5" />
-          </div>
-
-          <button
-            onClick={onOpenQuickAdd}
-            className="flex items-center gap-1.5 text-xs font-semibold text-[#191D23] hover:underline cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Task</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Desktop / Tablet Expansion: Daily Focus & Financial Health Summary */}
-      <div className="pt-4 border-t border-[#EAE5DC] grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Card 1: Money to Pay */}
-        <div
+        <button
+          type="button"
           onClick={() => onNavigate("finance")}
-          className="bg-white border border-[#EAE5DC] p-4 rounded-2xl hover:border-[#D9D3C7] transition-all cursor-pointer shadow-xs"
+          className="w-full df-card rounded-[18px] p-3.5 flex items-center gap-3 text-left cursor-pointer df-focus-ring"
         >
-          <div className="flex items-center justify-between text-[#787E86] mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">
-              Finances
-            </span>
-            <span className="text-xs font-bold text-[#1A1D20]">
-              {settings.currency}
-              {(stats.netBalance || 0).toLocaleString("en-IN")}
-            </span>
+          <div className="w-10 h-10 rounded-xl bg-[var(--accent-mint)] text-[var(--sidebar)] flex items-center justify-center shrink-0">
+            <Wifi className="w-5 h-5" aria-hidden />
           </div>
-          <p className="text-xs text-[#525861] leading-relaxed">
-            {dailyQuestions?.moneyToPay?.summary ||
-              "All debts tracked and monthly commitments on schedule."}
-          </p>
-        </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] font-bold text-[var(--sidebar-end)] truncate">
+              Internet bill
+            </p>
+            <p className="text-[11px] text-[var(--foreground-muted)] font-medium mt-0.5">
+              {currency}899 · Upcoming payment
+            </p>
+          </div>
+          <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-[var(--warning-soft)] text-[var(--warning)] shrink-0">
+            Due soon
+          </span>
+        </button>
 
-        {/* Card 2: Schedule Overview */}
-        <div
-          onClick={() => onNavigate("schedule")}
-          className="bg-[#E6EDE3] border border-[#CFDDCC] p-4 rounded-2xl hover:border-[#BACDB7] transition-all cursor-pointer shadow-xs"
-        >
-          <div className="flex items-center justify-between text-[#2D492C] mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider">
-              Today&apos;s Schedule
-            </span>
-            <Calendar className="w-4 h-4 text-[#2D492C]" />
-          </div>
-          <p className="text-xs text-[#354B34] leading-relaxed">
-            Daily standup at 8:00 AM, Exploration phase at 2:00 PM. Tap to view timeline.
-          </p>
-        </div>
-
-        {/* Card 3: Growth & Habit Focus */}
-        <div
-          onClick={() => onNavigate("habits")}
-          className="bg-white border border-[#EAE5DC] p-4 rounded-2xl hover:border-[#D9D3C7] transition-all cursor-pointer shadow-xs"
-        >
-          <div className="flex items-center justify-between text-[#787E86] mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">
-              Habits Streak
-            </span>
-            <span className="text-xs font-bold text-[#1A1D20]">
-              {stats.habitsCompletedToday || 0}/{stats.habitsTotal || 3}
-            </span>
-          </div>
-          <p className="text-xs text-[#525861] leading-relaxed">
-            {dailyQuestions?.careerGrowth?.summary ||
-              "Small consistent habits yield compound results over time."}
-          </p>
-        </div>
+        <HabitStreak onViewAll={() => onNavigate("habits")} />
       </div>
     </div>
   );

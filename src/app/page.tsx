@@ -14,13 +14,23 @@ import QuickAddModal from "@/components/QuickAddModal";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<NavTab>("dashboard");
-  const [dashboardData, setDashboardData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const fallbackDashboard = {
+    success: true,
+    stats: {},
+    settings: { userName: "Arjun", currency: "₹" },
+    dailyQuestions: {},
+    dbStatus: { connected: false },
+  };
+
+  const [dashboardData, setDashboardData] = useState<any>(fallbackDashboard);
+  const [loading, setLoading] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
 
   const fetchDashboardData = useCallback(async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2500);
     try {
-      const res = await fetch("/api/dashboard");
+      const res = await fetch("/api/dashboard", { signal: controller.signal });
       const data = await res.json();
       if (data.success) {
         if (data.stats.totalTasks === 0 && data.stats.totalIncome === 0) {
@@ -37,6 +47,7 @@ export default function Home() {
     } catch (err) {
       console.error("Dashboard fetch error:", err);
     } finally {
+      clearTimeout(timeout);
       setLoading(false);
     }
   }, []);
@@ -59,31 +70,37 @@ export default function Home() {
     }
   };
 
+  const isDashboard = activeTab === "dashboard";
+
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-[#F7F5F0] text-[#1A1D20] selection:bg-[#191D23] selection:text-white font-sans antialiased">
-      {/* Navigation (Sidebar on Desktop, Header & Floating Island on Mobile) */}
+    <div className="min-h-screen flex flex-col md:flex-row bg-[var(--background)] text-[var(--foreground)] selection:bg-[var(--sidebar)] selection:text-white font-sans antialiased">
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenQuickAdd={() => setQuickAddOpen(true)}
         dbConnected={dashboardData?.dbStatus?.connected ?? true}
         overdueCount={dashboardData?.stats?.overdueCount || 0}
-        userName={dashboardData?.settings?.userName || "Shihab"}
+        userName={dashboardData?.settings?.userName || "Arjun"}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 md:ml-64 p-3 sm:p-5 md:p-8 lg:p-10 max-w-7xl w-full mx-auto overflow-y-auto min-h-screen">
+      <main
+        className={`flex-1 md:ml-[var(--sidebar-width)] w-full min-h-screen overflow-y-auto transition-[margin,padding] duration-300 pb-28 md:pb-4 ${
+          isDashboard
+            ? "px-4 pt-1 sm:p-4 lg:p-4 xl:p-5"
+            : "px-4 pt-1 sm:p-5 md:p-8 lg:p-10 max-w-7xl mx-auto"
+        }`}
+      >
         {loading ? (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-white border border-[#EAE5DC] flex items-center justify-center shadow-xs">
-              <span className="w-4 h-4 rounded-full bg-[#191D23] animate-ping" />
+          <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 animate-df-fade-in">
+            <div className="w-12 h-12 rounded-2xl bg-white border border-[#e4ebe4] flex items-center justify-center shadow-sm">
+              <span className="w-4 h-4 rounded-full bg-[var(--sidebar)] animate-ping" />
             </div>
-            <p className="text-xs text-[#787E86] font-medium">
-              Synchronizing Daily Flow workspace...
+            <p className="text-xs text-[#6b756f] font-medium">
+              Synchronizing Dayflow workspace...
             </p>
           </div>
         ) : (
-          <>
+          <div key={activeTab} className="animate-df-fade-up">
             {activeTab === "dashboard" && (
               <DashboardView
                 data={dashboardData}
@@ -123,11 +140,10 @@ export default function Home() {
             {activeTab === "settings" && (
               <SettingsView onRefreshDashboard={fetchDashboardData} />
             )}
-          </>
+          </div>
         )}
       </main>
 
-      {/* Global Quick Add Modal */}
       <QuickAddModal
         isOpen={quickAddOpen}
         onClose={() => setQuickAddOpen(false)}

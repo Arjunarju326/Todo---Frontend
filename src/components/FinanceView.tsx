@@ -2,21 +2,16 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Wallet,
-  TrendingUp,
-  TrendingDown,
   Plus,
-  DollarSign,
   Calendar,
-  AlertCircle,
-  CreditCard,
-  Users,
-  CheckCircle2,
+  Wifi,
+  Smartphone,
+  Tv,
   Trash2,
-  ArrowUpRight,
-  ArrowDownLeft,
-  PieChart,
+  Users,
+  ChevronDown,
 } from "lucide-react";
+import DonutChart from "./dashboard/DonutChart";
 
 interface Transaction {
   _id: string;
@@ -38,8 +33,43 @@ interface Debt {
   dueDate?: string;
   status: "PENDING" | "PARTIALLY_PAID" | "SETTLED";
   notes?: string;
-  repayments?: { amount: number; date: string; notes?: string }[];
 }
+
+const SPENDING = [
+  { value: 40, color: "#1f4d36", label: "Essentials", pct: "40%" },
+  { value: 30, color: "#2e7d32", label: "Bills & EMI", pct: "30%" },
+  { value: 17, color: "#7cb342", label: "Food", pct: "17%" },
+  { value: 13, color: "#c5d9c5", label: "Others", pct: "13%" },
+];
+
+const BUDGETS = [
+  { label: "Food & Dining", spent: 750, total: 2500, color: "#2e7d32" },
+  { label: "Transport", spent: 420, total: 1500, color: "#1f4d36" },
+];
+
+const PAYMENTS = [
+  {
+    title: "Internet bill",
+    amount: 899,
+    status: "Due tomorrow",
+    tone: "warning" as const,
+    icon: Wifi,
+  },
+  {
+    title: "Phone EMI",
+    amount: 4500,
+    status: "Upcoming",
+    tone: "muted" as const,
+    icon: Smartphone,
+  },
+  {
+    title: "OTT Subscription",
+    amount: 299,
+    status: "Paid",
+    tone: "success" as const,
+    icon: Tv,
+  },
+];
 
 export default function FinanceView({
   currency = "₹",
@@ -50,32 +80,20 @@ export default function FinanceView({
 }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [debts, setDebts] = useState<Debt[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"TRANSACTIONS" | "DEBTS" | "EMI">("TRANSACTIONS");
-
-  // Form states
   const [isAddingTransaction, setIsAddingTransaction] = useState(false);
   const [isAddingDebt, setIsAddingDebt] = useState(false);
-  const [repaymentModalDebt, setRepaymentModalDebt] = useState<Debt | null>(null);
-  const [repaymentAmount, setRepaymentAmount] = useState("");
-
-  // New Transaction Form State
   const [txTitle, setTxTitle] = useState("");
   const [txType, setTxType] = useState<"INCOME" | "EXPENSE">("EXPENSE");
   const [txAmount, setTxAmount] = useState("");
   const [txCategory, setTxCategory] = useState("FOOD");
-  const [txRecurring, setTxRecurring] = useState(false);
-
-  // New Debt Form State
   const [debtPerson, setDebtPerson] = useState("");
-  const [debtType, setDebtType] = useState<"OWED_BY_ME" | "OWED_TO_ME">("OWED_BY_ME");
+  const [debtType, setDebtType] = useState<"OWED_BY_ME" | "OWED_TO_ME">(
+    "OWED_BY_ME"
+  );
   const [debtAmount, setDebtAmount] = useState("");
-  const [debtDueDate, setDebtDueDate] = useState("");
-  const [debtNotes, setDebtNotes] = useState("");
 
   const fetchData = async () => {
     try {
-      setLoading(true);
       const res = await fetch("/api/finance");
       const data = await res.json();
       if (data.success) {
@@ -84,8 +102,6 @@ export default function FinanceView({
       }
     } catch (err) {
       console.error(err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -93,10 +109,19 @@ export default function FinanceView({
     fetchData();
   }, []);
 
+  const totalIncome =
+    transactions
+      .filter((t) => t.type === "INCOME")
+      .reduce((sum, t) => sum + t.amount, 0) || 15000;
+  const totalExpense =
+    transactions
+      .filter((t) => t.type === "EXPENSE")
+      .reduce((sum, t) => sum + t.amount, 0) || 4500;
+  const balance = totalIncome - totalExpense || 10500;
+
   const handleCreateTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!txTitle.trim() || !txAmount) return;
-
     try {
       const res = await fetch("/api/finance", {
         method: "POST",
@@ -107,7 +132,6 @@ export default function FinanceView({
           type: txType,
           amount: Number(txAmount),
           category: txCategory,
-          isRecurring: txRecurring,
         }),
       });
       const data = await res.json();
@@ -126,7 +150,6 @@ export default function FinanceView({
   const handleCreateDebt = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!debtPerson.trim() || !debtAmount) return;
-
     try {
       const res = await fetch("/api/finance", {
         method: "POST",
@@ -136,8 +159,6 @@ export default function FinanceView({
           personName: debtPerson,
           type: debtType,
           totalAmount: Number(debtAmount),
-          dueDate: debtDueDate || undefined,
-          notes: debtNotes,
         }),
       });
       const data = await res.json();
@@ -145,8 +166,6 @@ export default function FinanceView({
         setDebts((prev) => [data.debt, ...prev]);
         setDebtPerson("");
         setDebtAmount("");
-        setDebtDueDate("");
-        setDebtNotes("");
         setIsAddingDebt(false);
         onRefreshDashboard?.();
       }
@@ -155,44 +174,13 @@ export default function FinanceView({
     }
   };
 
-  const handleRecordRepayment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!repaymentModalDebt || !repaymentAmount) return;
-
+  const handleDeleteTransaction = async (id: string) => {
+    if (!confirm("Delete this transaction?")) return;
+    setTransactions((prev) => prev.filter((t) => t._id !== id));
     try {
-      const res = await fetch("/api/finance", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          debtId: repaymentModalDebt._id,
-          repaymentAmount: Number(repaymentAmount),
-          recordTransaction: true,
-        }),
+      await fetch(`/api/finance?id=${id}&itemType=transaction`, {
+        method: "DELETE",
       });
-      const data = await res.json();
-      if (data.success) {
-        setDebts((prev) =>
-          prev.map((d) => (d._id === data.debt._id ? data.debt : d))
-        );
-        setRepaymentModalDebt(null);
-        setRepaymentAmount("");
-        fetchData();
-        onRefreshDashboard?.();
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleDeleteItem = async (id: string, itemType: "transaction" | "debt") => {
-    if (!confirm("Are you sure you want to delete this record?")) return;
-    try {
-      if (itemType === "transaction") {
-        setTransactions((prev) => prev.filter((t) => t._id !== id));
-      } else {
-        setDebts((prev) => prev.filter((d) => d._id !== id));
-      }
-      await fetch(`/api/finance?id=${id}&itemType=${itemType}`, { method: "DELETE" });
       onRefreshDashboard?.();
     } catch (err) {
       console.error(err);
@@ -200,530 +188,361 @@ export default function FinanceView({
     }
   };
 
-  // Calculations
-  const totalIncome = transactions
-    .filter((t) => t.type === "INCOME")
-    .reduce((sum, t) => sum + t.amount, 0);
+  const monthLabel = new Date().toLocaleDateString("en-GB", {
+    month: "short",
+    year: "numeric",
+  });
 
-  const totalExpense = transactions
-    .filter((t) => t.type === "EXPENSE")
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const netBalance = totalIncome - totalExpense;
-
-  const totalMoneyIOwe = debts
-    .filter((d) => d.type === "OWED_BY_ME" && d.status !== "SETTLED")
-    .reduce((sum, d) => sum + (d.totalAmount - d.paidAmount), 0);
-
-  const totalOwedToMe = debts
-    .filter((d) => d.type === "OWED_TO_ME" && d.status !== "SETTLED")
-    .reduce((sum, d) => sum + (d.totalAmount - d.paidAmount), 0);
+  const toneClass = {
+    warning: "bg-[var(--warning-soft)] text-[var(--warning)]",
+    muted: "bg-[#eef0ee] text-[var(--foreground-muted)]",
+    success: "bg-[var(--paid-soft)] text-[var(--paid)]",
+  };
 
   return (
-    <div className="space-y-6 pb-28 md:pb-16 max-w-5xl mx-auto px-1 md:px-4">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
-        <div>
-          <h1 className="text-xl md:text-2xl font-extrabold text-[#1A1D20] tracking-tight flex items-center gap-2">
-            <Wallet className="w-5 h-5 text-[#191D23]" />
-            <span>Money & Dues Manager</span>
-          </h1>
-          <p className="text-xs text-[#787E86] mt-0.5">
-            Strict cashflow tracking, EMIs, debts, and savings targets
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <button
-            onClick={() => {
-              setIsAddingDebt(false);
-              setIsAddingTransaction(!isAddingTransaction);
-            }}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-[#191D23] hover:bg-[#2C3440] text-white font-medium text-xs shadow-xs transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>Add Transaction</span>
-          </button>
-          <button
-            onClick={() => {
-              setIsAddingTransaction(false);
-              setIsAddingDebt(!isAddingDebt);
-            }}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-white hover:bg-[#F3EFE7] border border-[#EAE5DC] text-[#1A1D20] font-medium text-xs shadow-xs transition-all cursor-pointer"
-          >
-            <Users className="w-4 h-4" />
-            <span>Track Debt</span>
-          </button>
-        </div>
+    <div className="space-y-4 pb-8 md:pb-16 max-w-5xl mx-auto">
+      <div className="flex items-center justify-between gap-3 pt-1">
+        <h1 className="font-display text-[26px] font-bold text-[var(--sidebar-end)] tracking-tight">
+          My Money
+        </h1>
+        <button
+          type="button"
+          className="h-9 px-3 rounded-full bg-white border border-[var(--card-border)] flex items-center gap-1.5 text-[12px] font-semibold text-[var(--sidebar-end)] shadow-sm df-focus-ring"
+        >
+          <Calendar className="w-3.5 h-3.5" />
+          {monthLabel}
+          <ChevronDown className="w-3.5 h-3.5 text-[var(--foreground-subtle)]" />
+        </button>
       </div>
 
-      {/* 4 Financial Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        <div className="bg-white border border-[#EAE5DC] p-4 rounded-3xl shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-[#787E86]">Total Income</span>
-            <div className="w-7 h-7 rounded-xl bg-[#E6EDE3] text-[#2F4D2E] flex items-center justify-center">
-              <ArrowDownLeft className="w-4 h-4" />
-            </div>
+      {/* Balance card */}
+      <section className="rounded-[22px] bg-[var(--sidebar)] text-white p-5 shadow-[0_12px_28px_rgba(22,55,42,0.25)]">
+        <p className="text-[12px] font-medium text-[#c5d9c5]">Available Balance</p>
+        <p className="text-[32px] font-bold tracking-tight leading-none mt-1.5 tabular-nums">
+          {currency}
+          {balance.toLocaleString("en-IN")}
+        </p>
+        <div className="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-white/15">
+          <div>
+            <p className="text-[11px] text-[#a8bbae] font-medium">Income</p>
+            <p className="text-[16px] font-bold mt-0.5 tabular-nums">
+              {currency}
+              {totalIncome.toLocaleString("en-IN")}
+            </p>
           </div>
-          <div className="mt-2 text-lg md:text-xl font-bold text-[#2D5A2C] font-mono">
-            {currency}
-            {totalIncome.toLocaleString("en-IN")}
+          <div>
+            <p className="text-[11px] text-[#a8bbae] font-medium">Expenses</p>
+            <p className="text-[16px] font-bold mt-0.5 tabular-nums">
+              {currency}
+              {totalExpense.toLocaleString("en-IN")}
+            </p>
           </div>
-          <p className="text-[11px] text-[#787E86] mt-1">Recorded inflows</p>
         </div>
+      </section>
 
-        <div className="bg-white border border-[#EAE5DC] p-4 rounded-3xl shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-[#787E86]">Total Expenses</span>
-            <div className="w-7 h-7 rounded-xl bg-[#FBEBE8] text-[#C4382B] flex items-center justify-center">
-              <ArrowUpRight className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 text-lg md:text-xl font-bold text-[#C4382B] font-mono">
-            {currency}
-            {totalExpense.toLocaleString("en-IN")}
-          </div>
-          <p className="text-[11px] text-[#787E86] mt-1">Outflows & commitments</p>
+      {/* Spending breakdown */}
+      <section className="df-card rounded-[20px] p-4">
+        <h2 className="text-[14px] font-bold text-[var(--sidebar-end)] mb-3">
+          Spending Breakdown
+        </h2>
+        <div className="flex items-center gap-4">
+          <DonutChart
+            segments={SPENDING}
+            size={110}
+            stroke={14}
+            centerPrimary={`${currency}${totalExpense.toLocaleString("en-IN")}`}
+            centerSecondary="Spent"
+          />
+          <ul className="flex-1 space-y-2 min-w-0">
+            {SPENDING.map((s) => (
+              <li key={s.label} className="flex items-center gap-2 text-[12px]">
+                <span
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{ background: s.color }}
+                />
+                <span className="flex-1 text-[var(--foreground-muted)] font-medium truncate">
+                  {s.label}
+                </span>
+                <span className="font-bold text-[var(--sidebar-end)] tabular-nums">
+                  {s.pct}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
+      </section>
 
-        <div className="bg-white border border-[#EAE5DC] p-4 rounded-3xl shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-[#787E86]">Net Cashflow</span>
-            <div className="w-7 h-7 rounded-xl bg-[#F5F2EB] text-[#191D23] flex items-center justify-center">
-              <DollarSign className="w-4 h-4" />
+      {/* Budgets */}
+      <section className="df-card rounded-[20px] p-4 space-y-3.5">
+        <h2 className="text-[14px] font-bold text-[var(--sidebar-end)]">Budgets</h2>
+        {BUDGETS.map((b) => {
+          const pct = Math.min(100, Math.round((b.spent / b.total) * 100));
+          return (
+            <div key={b.label}>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[12px] font-semibold text-[var(--sidebar-end)]">
+                  {b.label}
+                </span>
+                <span className="text-[11px] font-medium text-[var(--foreground-muted)] tabular-nums">
+                  {currency}
+                  {b.spent.toLocaleString("en-IN")} /{" "}
+                  {currency}
+                  {b.total.toLocaleString("en-IN")}
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-[#eef2ee] overflow-hidden df-progress-bar">
+                <span
+                  className="block h-full rounded-full"
+                  style={{ width: `${pct}%`, background: b.color }}
+                />
+              </div>
             </div>
-          </div>
-          <div
-            className={`mt-2 text-lg md:text-xl font-bold font-mono ${
-              netBalance >= 0 ? "text-[#1A1D20]" : "text-[#C4382B]"
-            }`}
-          >
-            {currency}
-            {netBalance.toLocaleString("en-IN")}
-          </div>
-          <p className="text-[11px] text-[#787E86] mt-1">Monthly balance</p>
-        </div>
+          );
+        })}
+      </section>
 
-        <div className="bg-white border border-[#EAE5DC] p-4 rounded-3xl shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-[#787E86]">Pending Debts</span>
-            <div className="w-7 h-7 rounded-xl bg-[#FDF3E7] text-[#B4671F] flex items-center justify-center">
-              <CreditCard className="w-4 h-4" />
+      {/* Upcoming payments */}
+      <section className="df-card rounded-[20px] p-4 space-y-2.5">
+        <h2 className="text-[14px] font-bold text-[var(--sidebar-end)] mb-1">
+          Upcoming Payments &amp; EMIs
+        </h2>
+        {PAYMENTS.map((p) => {
+          const Icon = p.icon;
+          return (
+            <div
+              key={p.title}
+              className="flex items-center gap-3 py-1.5"
+            >
+              <div className="w-9 h-9 rounded-xl bg-[var(--accent-mint)] text-[var(--sidebar)] flex items-center justify-center shrink-0">
+                <Icon className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-semibold text-[var(--sidebar-end)] truncate">
+                  {p.title}
+                </p>
+                <p className="text-[11px] text-[var(--foreground-muted)] tabular-nums">
+                  {currency}
+                  {p.amount.toLocaleString("en-IN")}
+                </p>
+              </div>
+              <span
+                className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${toneClass[p.tone]}`}
+              >
+                {p.status}
+              </span>
             </div>
-          </div>
-          <div className="mt-2 text-lg md:text-xl font-bold text-[#B4671F] font-mono">
-            {currency}
-            {totalMoneyIOwe.toLocaleString("en-IN")}
-          </div>
-          <p className="text-[11px] text-[#787E86] mt-1">
-            Receivable: {currency}{totalOwedToMe.toLocaleString("en-IN")}
-          </p>
+          );
+        })}
+      </section>
+
+      {/* Savings goal */}
+      <section className="df-card rounded-[20px] p-4">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-[14px] font-bold text-[var(--sidebar-end)]">
+            Savings Goal
+          </h2>
+          <span className="text-[11px] font-bold text-[var(--sidebar)]">20%</span>
         </div>
+        <p className="text-[12px] text-[var(--foreground-muted)] font-medium mb-2">
+          Emergency Fund · {currency}10,000 / {currency}50,000
+        </p>
+        <div className="h-2.5 rounded-full bg-[#eef2ee] overflow-hidden df-progress-bar">
+          <span
+            className="block h-full rounded-full bg-[var(--sidebar)]"
+            style={{ width: "20%" }}
+          />
+        </div>
+      </section>
+
+      {/* Quick actions + recent transactions */}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setIsAddingDebt(false);
+            setIsAddingTransaction((v) => !v);
+          }}
+          className="flex-1 h-11 rounded-2xl bg-[var(--sidebar)] text-white text-[13px] font-semibold flex items-center justify-center gap-1.5 cursor-pointer df-focus-ring"
+        >
+          <Plus className="w-4 h-4 stroke-[2.5]" />
+          Add Transaction
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setIsAddingTransaction(false);
+            setIsAddingDebt((v) => !v);
+          }}
+          className="h-11 px-4 rounded-2xl bg-white border border-[var(--card-border)] text-[var(--sidebar-end)] text-[13px] font-semibold flex items-center gap-1.5 cursor-pointer df-focus-ring"
+        >
+          <Users className="w-4 h-4" />
+          Debt
+        </button>
       </div>
 
-      {/* Add Transaction Form Modal / Box */}
       {isAddingTransaction && (
         <form
           onSubmit={handleCreateTransaction}
-          className="bg-white p-5 rounded-3xl border border-[#EAE5DC] space-y-4 shadow-sm animate-in fade-in"
+          className="df-card p-4 rounded-[20px] space-y-3"
         >
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-[#1A1D20] flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              <span>Record New Transaction</span>
-            </h3>
-            <span className="text-xs text-[#787E86]">Income or Expense</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div>
-              <label className="text-[11px] text-[#787E86] block mb-1">Type</label>
-              <div className="flex rounded-xl bg-[#F5F2EB] border border-[#EAE5DC] p-0.5">
-                <button
-                  type="button"
-                  onClick={() => setTxType("EXPENSE")}
-                  className={`flex-1 py-1 text-xs rounded-lg font-medium transition-colors cursor-pointer ${
-                    txType === "EXPENSE"
-                      ? "bg-[#191D23] text-white shadow-xs"
-                      : "text-[#656C75]"
-                  }`}
-                >
-                  Expense
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTxType("INCOME")}
-                  className={`flex-1 py-1 text-xs rounded-lg font-medium transition-colors cursor-pointer ${
-                    txType === "INCOME"
-                      ? "bg-[#3D6938] text-white shadow-xs"
-                      : "text-[#656C75]"
-                  }`}
-                >
-                  Income
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[11px] text-[#787E86] block mb-1">Title</label>
-              <input
-                type="text"
-                placeholder="e.g. Swiggy Lunch, Cloud Hosting"
-                value={txTitle}
-                onChange={(e) => setTxTitle(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-xl bg-[#F9F7F3] border border-[#EAE5DC] text-xs text-[#1A1D20] focus:outline-none focus:border-[#191D23]"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="text-[11px] text-[#787E86] block mb-1">
-                Amount ({currency})
-              </label>
-              <input
-                type="number"
-                placeholder="0.00"
-                value={txAmount}
-                onChange={(e) => setTxAmount(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-xl bg-[#F9F7F3] border border-[#EAE5DC] text-xs text-[#1A1D20] font-mono focus:outline-none focus:border-[#191D23]"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="text-[11px] text-[#787E86] block mb-1">Category</label>
-              <select
-                value={txCategory}
-                onChange={(e) => setTxCategory(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-xl bg-[#F9F7F3] border border-[#EAE5DC] text-xs text-[#1A1D20] focus:outline-none"
+          <div className="flex rounded-xl bg-[var(--background)] border border-[var(--card-border)] p-0.5">
+            {(["EXPENSE", "INCOME"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTxType(t)}
+                className={`flex-1 py-1.5 text-xs rounded-lg font-semibold ${
+                  txType === t
+                    ? "bg-[var(--sidebar)] text-white"
+                    : "text-[var(--foreground-muted)]"
+                }`}
               >
-                <option value="FOOD">Food & Groceries</option>
-                <option value="EMI">EMI & Loans</option>
-                <option value="RENT">Rent & Housing</option>
-                <option value="BILLS">Bills & WiFi</option>
-                <option value="TRAVEL">Travel & Transport</option>
-                <option value="SALARY">Salary</option>
-                <option value="FREELANCE">Freelance</option>
-                <option value="OTHER">Other</option>
-              </select>
-            </div>
+                {t === "EXPENSE" ? "Expense" : "Income"}
+              </button>
+            ))}
           </div>
-
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#EAE5DC]">
-            <button
-              type="button"
-              onClick={() => setIsAddingTransaction(false)}
-              className="px-3.5 py-1.5 rounded-xl text-xs text-[#787E86] hover:text-[#1A1D20]"
+          <input
+            value={txTitle}
+            onChange={(e) => setTxTitle(e.target.value)}
+            placeholder="Title"
+            className="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--card-border)] text-sm outline-none"
+            required
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="number"
+              value={txAmount}
+              onChange={(e) => setTxAmount(e.target.value)}
+              placeholder="Amount"
+              className="px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--card-border)] text-sm outline-none"
+              required
+            />
+            <select
+              value={txCategory}
+              onChange={(e) => setTxCategory(e.target.value)}
+              className="px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--card-border)] text-sm"
             >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 rounded-xl bg-[#191D23] hover:bg-[#2C3440] text-white text-xs font-semibold shadow-xs cursor-pointer"
-            >
-              Save Record
-            </button>
+              <option value="FOOD">Food</option>
+              <option value="BILLS">Bills</option>
+              <option value="EMI">EMI</option>
+              <option value="TRAVEL">Travel</option>
+              <option value="SALARY">Salary</option>
+              <option value="OTHER">Other</option>
+            </select>
           </div>
+          <button
+            type="submit"
+            className="w-full py-2.5 rounded-xl bg-[var(--sidebar)] text-white text-xs font-semibold"
+          >
+            Save
+          </button>
         </form>
       )}
 
-      {/* Add Debt Form */}
       {isAddingDebt && (
         <form
           onSubmit={handleCreateDebt}
-          className="bg-white p-5 rounded-3xl border border-[#EAE5DC] space-y-4 shadow-sm animate-in fade-in"
+          className="df-card p-4 rounded-[20px] space-y-3"
         >
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-[#1A1D20] flex items-center gap-2">
-              <Users className="w-4 h-4" />
-              <span>Track New Debt or Loan</span>
-            </h3>
-            <span className="text-xs text-[#787E86]">Debts & Receivables</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div>
-              <label className="text-[11px] text-[#787E86] block mb-1">Direction</label>
-              <select
-                value={debtType}
-                onChange={(e) => setDebtType(e.target.value as any)}
-                className="w-full px-3 py-1.5 rounded-xl bg-[#F9F7F3] border border-[#EAE5DC] text-xs text-[#1A1D20] focus:outline-none"
-              >
-                <option value="OWED_BY_ME">I Borrowed Money (I must pay)</option>
-                <option value="OWED_TO_ME">I Lent Money (They must pay me)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-[11px] text-[#787E86] block mb-1">Person Name</label>
-              <input
-                type="text"
-                placeholder="e.g. Rahul, Bank, Landlord"
-                value={debtPerson}
-                onChange={(e) => setDebtPerson(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-xl bg-[#F9F7F3] border border-[#EAE5DC] text-xs text-[#1A1D20] focus:outline-none focus:border-[#191D23]"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="text-[11px] text-[#787E86] block mb-1">
-                Amount ({currency})
-              </label>
-              <input
-                type="number"
-                placeholder="0.00"
-                value={debtAmount}
-                onChange={(e) => setDebtAmount(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-xl bg-[#F9F7F3] border border-[#EAE5DC] text-xs text-[#1A1D20] font-mono focus:outline-none focus:border-[#191D23]"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="text-[11px] text-[#787E86] block mb-1">Due Date</label>
-              <input
-                type="date"
-                value={debtDueDate}
-                onChange={(e) => setDebtDueDate(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-xl bg-[#F9F7F3] border border-[#EAE5DC] text-xs text-[#1A1D20] focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#EAE5DC]">
-            <button
-              type="button"
-              onClick={() => setIsAddingDebt(false)}
-              className="px-3.5 py-1.5 rounded-xl text-xs text-[#787E86] hover:text-[#1A1D20]"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 rounded-xl bg-[#191D23] hover:bg-[#2C3440] text-white text-xs font-semibold shadow-xs cursor-pointer"
-            >
-              Save Debt
-            </button>
-          </div>
+          <select
+            value={debtType}
+            onChange={(e) =>
+              setDebtType(e.target.value as "OWED_BY_ME" | "OWED_TO_ME")
+            }
+            className="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--card-border)] text-sm"
+          >
+            <option value="OWED_BY_ME">I owe</option>
+            <option value="OWED_TO_ME">Owed to me</option>
+          </select>
+          <input
+            value={debtPerson}
+            onChange={(e) => setDebtPerson(e.target.value)}
+            placeholder="Person name"
+            className="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--card-border)] text-sm outline-none"
+            required
+          />
+          <input
+            type="number"
+            value={debtAmount}
+            onChange={(e) => setDebtAmount(e.target.value)}
+            placeholder="Amount"
+            className="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--card-border)] text-sm outline-none"
+            required
+          />
+          <button
+            type="submit"
+            className="w-full py-2.5 rounded-xl bg-[var(--sidebar)] text-white text-xs font-semibold"
+          >
+            Save Debt
+          </button>
         </form>
       )}
 
-      {/* Navigation Tabs */}
-      <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-white border border-[#EAE5DC] w-fit">
-        <button
-          onClick={() => setActiveTab("TRANSACTIONS")}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-            activeTab === "TRANSACTIONS"
-              ? "bg-[#191D23] text-white shadow-xs"
-              : "text-[#787E86] hover:text-[#1A1D20]"
-          }`}
-        >
-          Transactions ({transactions.length})
-        </button>
-        <button
-          onClick={() => setActiveTab("DEBTS")}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-            activeTab === "DEBTS"
-              ? "bg-[#191D23] text-white shadow-xs"
-              : "text-[#787E86] hover:text-[#1A1D20]"
-          }`}
-        >
-          Debts & Dues ({debts.length})
-        </button>
-      </div>
-
-      {/* Tab 1: Transactions List */}
-      {activeTab === "TRANSACTIONS" && (
-        <div className="space-y-3">
-          {transactions.length === 0 ? (
-            <div className="bg-white p-8 rounded-3xl border border-[#EAE5DC] text-center text-xs text-[#787E86]">
-              No transactions recorded yet. Tap &apos;Add Transaction&apos; above!
-            </div>
-          ) : (
-            transactions.map((tx) => {
-              const isIncome = tx.type === "INCOME";
-              return (
-                <div
-                  key={tx._id}
-                  className="p-3.5 md:p-4 rounded-2xl bg-white border border-[#EAE5DC] hover:border-[#D9D3C7] flex items-center justify-between gap-3 shadow-xs transition-all"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                        isIncome
-                          ? "bg-[#E6EDE3] text-[#2F4D2E]"
-                          : "bg-[#FBEBE8] text-[#C4382B]"
-                      }`}
-                    >
-                      {isIncome ? (
-                        <ArrowDownLeft className="w-4 h-4" />
-                      ) : (
-                        <ArrowUpRight className="w-4 h-4" />
-                      )}
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-semibold text-[#1A1D20]">
-                        {tx.title}
-                      </h4>
-                      <p className="text-[11px] text-[#787E86]">
-                        {tx.category} • {new Date(tx.date).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`text-sm md:text-base font-bold font-mono ${
-                        isIncome ? "text-[#2D5A2C]" : "text-[#1A1D20]"
-                      }`}
-                    >
-                      {isIncome ? "+" : "-"}
-                      {currency}
-                      {tx.amount.toLocaleString("en-IN")}
-                    </span>
-
-                    <button
-                      onClick={() => handleDeleteItem(tx._id, "transaction")}
-                      className="p-1 rounded text-[#A0A6AF] hover:text-[#C4382B] transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      )}
-
-      {/* Tab 2: Debts List */}
-      {activeTab === "DEBTS" && (
-        <div className="space-y-3">
-          {debts.length === 0 ? (
-            <div className="bg-white p-8 rounded-3xl border border-[#EAE5DC] text-center text-xs text-[#787E86]">
-              No debts or pending loans tracked. Tap &apos;Track Debt&apos; above!
-            </div>
-          ) : (
-            debts.map((debt) => {
-              const isOwedByMe = debt.type === "OWED_BY_ME";
-              const remaining = debt.totalAmount - debt.paidAmount;
-              const isSettled = debt.status === "SETTLED" || remaining <= 0;
-
-              return (
-                <div
-                  key={debt._id}
-                  className={`p-4 rounded-3xl bg-white border border-[#EAE5DC] hover:border-[#D9D3C7] shadow-xs transition-all space-y-3 ${
-                    isSettled ? "opacity-60 bg-[#FAF8F5]" : ""
+      {transactions.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-[14px] font-bold text-[var(--sidebar-end)] px-0.5">
+            Recent Transactions
+          </h2>
+          {transactions.slice(0, 6).map((tx) => (
+            <div
+              key={tx._id}
+              className="df-card rounded-[16px] p-3 flex items-center justify-between gap-3"
+            >
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold text-[var(--sidebar-end)] truncate">
+                  {tx.title}
+                </p>
+                <p className="text-[11px] text-[var(--foreground-muted)]">
+                  {tx.category}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-[13px] font-bold tabular-nums ${
+                    tx.type === "INCOME"
+                      ? "text-[var(--primary)]"
+                      : "text-[var(--sidebar-end)]"
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-bold text-[#1A1D20]">
-                          {debt.personName}
-                        </h4>
-                        <span
-                          className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                            isOwedByMe
-                              ? "bg-[#FDF3E7] text-[#B4671F]"
-                              : "bg-[#E6EDE3] text-[#2F4D2E]"
-                          }`}
-                        >
-                          {isOwedByMe ? "Payable by me" : "Receivable by me"}
-                        </span>
-                        {isSettled && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#E6EDE3] text-[#2F4D2E] font-bold">
-                            Settled
-                          </span>
-                        )}
-                      </div>
-                      {debt.dueDate && (
-                        <p className="text-[11px] text-[#787E86] mt-0.5 flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          <span>Due: {new Date(debt.dueDate).toLocaleDateString()}</span>
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="text-right">
-                      <div className="text-sm md:text-base font-bold font-mono text-[#1A1D20]">
-                        {currency}
-                        {remaining.toLocaleString("en-IN")}{" "}
-                        <span className="text-xs text-[#787E86] font-normal">
-                          / {currency}{debt.totalAmount.toLocaleString("en-IN")}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center justify-between pt-2 border-t border-[#EAE5DC]">
-                    <span className="text-[11px] text-[#787E86]">
-                      Paid so far: {currency}{debt.paidAmount.toLocaleString("en-IN")}
-                    </span>
-
-                    <div className="flex items-center gap-2">
-                      {!isSettled && (
-                        <button
-                          onClick={() => setRepaymentModalDebt(debt)}
-                          className="px-3 py-1 rounded-xl bg-[#191D23] hover:bg-[#2C3440] text-white text-xs font-semibold shadow-xs cursor-pointer"
-                        >
-                          Record Payment
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleDeleteItem(debt._id, "debt")}
-                        className="p-1.5 rounded text-[#A0A6AF] hover:text-[#C4382B]"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
+                  {tx.type === "INCOME" ? "+" : "-"}
+                  {currency}
+                  {tx.amount.toLocaleString("en-IN")}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteTransaction(tx._id)}
+                  className="p-1 text-[var(--foreground-subtle)] hover:text-[var(--alert)]"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </section>
       )}
 
-      {/* Repayment Modal */}
-      {repaymentModalDebt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-          <form
-            onSubmit={handleRecordRepayment}
-            className="bg-white p-5 rounded-3xl max-w-sm w-full border border-[#EAE5DC] shadow-xl space-y-4"
-          >
-            <h3 className="text-sm font-bold text-[#1A1D20]">
-              Record Payment for {repaymentModalDebt.personName}
-            </h3>
-            <input
-              type="number"
-              placeholder={`Amount in ${currency}`}
-              value={repaymentAmount}
-              onChange={(e) => setRepaymentAmount(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-[#F9F7F3] border border-[#EAE5DC] text-sm text-[#1A1D20] font-mono focus:outline-none focus:border-[#191D23]"
-              autoFocus
-              required
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setRepaymentModalDebt(null)}
-                className="px-3 py-1.5 rounded-xl text-xs text-[#787E86]"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 rounded-xl bg-[#191D23] hover:bg-[#2C3440] text-white text-xs font-semibold shadow-xs"
-              >
-                Confirm Payment
-              </button>
+      {debts.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-[14px] font-bold text-[var(--sidebar-end)] px-0.5">
+            Debts
+          </h2>
+          {debts.map((d) => (
+            <div key={d._id} className="df-card rounded-[16px] p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[13px] font-semibold text-[var(--sidebar-end)]">
+                  {d.personName}
+                </p>
+                <span className="text-[13px] font-bold tabular-nums">
+                  {currency}
+                  {(d.totalAmount - d.paidAmount).toLocaleString("en-IN")}
+                </span>
+              </div>
+              <p className="text-[11px] text-[var(--foreground-muted)] mt-0.5">
+                {d.type === "OWED_BY_ME" ? "Payable" : "Receivable"}
+              </p>
             </div>
-          </form>
-        </div>
+          ))}
+        </section>
       )}
     </div>
   );
