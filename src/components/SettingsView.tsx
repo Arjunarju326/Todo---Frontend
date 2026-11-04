@@ -5,37 +5,42 @@ import {
   Settings,
   Database,
   User,
-  DollarSign,
-  ShieldCheck,
   RefreshCw,
-  Sparkles,
-  Server,
-  Zap,
+  LogOut,
+  ImageIcon,
 } from "lucide-react";
+import MobileHeroBanner from "./dashboard/MobileHeroBanner";
+import { useMobileAtmosphere } from "@/lib/mobileAtmosphere";
 
 export default function SettingsView({
   onRefreshDashboard,
+  onLogout,
 }: {
   onRefreshDashboard?: () => void;
+  onLogout?: () => void;
 }) {
   const [settings, setSettings] = useState({
-    userName: "Shihab",
-    monthlyIncome: 15000,
-    monthlyEmiCommitment: 4500,
-    savingsTarget: 1000,
+    userName: "Arjun",
+    monthlyIncome: 0,
+    monthlyEmiCommitment: 0,
+    savingsTarget: 0,
     currency: "₹",
     timezone: "Asia/Kolkata",
   });
   const [dbStatus, setDbStatus] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [seeding, setSeeding] = useState(false);
   const [message, setMessage] = useState("");
+  const {
+    enabled: atmosphereOn,
+    setEnabled: setAtmosphereOn,
+    imageCount,
+  } = useMobileAtmosphere();
 
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/settings");
+      const res = await fetch("/api/settings", { credentials: "include" });
       const data = await res.json();
       if (data.success) {
         setSettings(data.settings);
@@ -59,6 +64,7 @@ export default function SettingsView({
     try {
       const res = await fetch("/api/settings", {
         method: "PUT",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),
       });
@@ -75,35 +81,37 @@ export default function SettingsView({
     }
   };
 
-  const handleSeedData = async () => {
-    if (!confirm("Seed initial starter dataset into PostgreSQL (tododb)? This will add sample tasks, finances, and habits.")) return;
-    setSeeding(true);
-    setMessage("");
-    try {
-      const res = await fetch("/api/seed", { method: "POST" });
-      const data = await res.json();
-      if (data.success) {
-        setMessage(data.message || "Starter dataset populated!");
-        onRefreshDashboard?.();
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSeeding(false);
-    }
-  };
+  const logoutBtn = onLogout ? (
+    <button
+      type="button"
+      onClick={onLogout}
+      className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/90 backdrop-blur-sm border border-[#EAE5DC] text-[#C4382B] text-xs font-semibold hover:bg-[#FBEBE8] transition-colors cursor-pointer df-focus-ring"
+    >
+      <LogOut className="w-3.5 h-3.5" />
+      Log out
+    </button>
+  ) : null;
 
   return (
-    <div className="space-y-6 pb-28 md:pb-16 max-w-4xl mx-auto px-1 md:px-4">
-      {/* Top Header */}
-      <div className="pt-2">
-        <h1 className="text-xl md:text-2xl font-extrabold text-[#1A1D20] tracking-tight flex items-center gap-2">
-          <Settings className="w-5 h-5 text-[#191D23]" />
-          <span>Profile & Workspace Settings</span>
-        </h1>
-        <p className="text-xs text-[#787E86] mt-0.5">
-          Manage your personal profile, baseline financial numbers, and database connection
-        </p>
+    <div className="space-y-6 pb-28 md:pb-16 max-w-4xl mx-auto px-1 md:px-4 df-stagger">
+      <MobileHeroBanner
+        title="Settings"
+        subtitle="Profile, money baselines, and workspace"
+        actions={logoutBtn}
+      />
+
+      {/* Desktop header */}
+      <div className="hidden md:flex pt-2 items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl md:text-2xl font-extrabold text-[#1A1D20] tracking-tight flex items-center gap-2">
+            <Settings className="w-5 h-5 text-[#191D23]" />
+            <span>Profile & Workspace Settings</span>
+          </h1>
+          <p className="text-xs text-[#787E86] mt-0.5">
+            Manage your personal profile, baseline financial numbers, and database connection
+          </p>
+        </div>
+        {logoutBtn}
       </div>
 
       {message && (
@@ -112,8 +120,47 @@ export default function SettingsView({
         </div>
       )}
 
+      {/* Mobile scenic atmosphere */}
+      <div className="df-card df-card-lift p-5 rounded-3xl space-y-3 md:hidden">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-[var(--accent-mint)] text-[var(--sidebar)] flex items-center justify-center shrink-0">
+              <ImageIcon className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-[var(--sidebar-end)]">
+                Scenic backgrounds
+              </h3>
+              <p className="text-[11px] text-[var(--foreground-muted)] mt-0.5 leading-relaxed">
+                Full-screen nature wallpapers with glass cards. Rotates every 2
+                minutes across {imageCount} scenes.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={atmosphereOn}
+            aria-label="Toggle scenic backgrounds"
+            onClick={() => setAtmosphereOn(!atmosphereOn)}
+            className={`relative shrink-0 w-12 h-7 rounded-full transition-colors duration-200 df-focus-ring cursor-pointer ${
+              atmosphereOn ? "bg-[var(--sidebar)]" : "bg-[#d5dbd5]"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                atmosphereOn ? "translate-x-5" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
+        <p className="text-[11px] font-semibold text-[var(--sidebar)]">
+          {atmosphereOn ? "On — backgrounds & glass cards active" : "Off — solid cream UI"}
+        </p>
+      </div>
+
       {/* PostgreSQL Live Connection Card */}
-      <div className="bg-white p-5 rounded-3xl border border-[#EAE5DC] shadow-xs space-y-4">
+      <div className="df-card df-card-lift p-5 rounded-3xl space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-[#E6EDE3] text-[#2F4D2E] flex items-center justify-center">
@@ -162,7 +209,7 @@ export default function SettingsView({
       {/* Financial & User Settings Form */}
       <form
         onSubmit={handleSaveSettings}
-        className="bg-white p-6 rounded-3xl border border-[#EAE5DC] shadow-xs space-y-6"
+        className="df-card df-card-lift p-6 rounded-3xl space-y-6"
       >
         <h3 className="text-base font-bold text-[#1A1D20] flex items-center gap-2">
           <User className="w-4 h-4 text-[#191D23]" />
@@ -226,16 +273,7 @@ export default function SettingsView({
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-4 border-t border-[#EAE5DC]">
-          <button
-            type="button"
-            onClick={handleSeedData}
-            disabled={seeding}
-            className="px-4 py-2 rounded-xl bg-[#F5F2EB] hover:bg-[#EAE5DC] text-[#1A1D20] text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
-          >
-            {seeding ? "Populating Data..." : "Re-Seed Starter Dataset"}
-          </button>
-
+        <div className="flex items-center justify-end pt-4 border-t border-[#EAE5DC]">
           <button
             type="submit"
             disabled={saving}
@@ -245,6 +283,27 @@ export default function SettingsView({
           </button>
         </div>
       </form>
+
+      {onLogout && (
+        <div className="df-card rounded-[20px] p-4 flex items-center justify-between gap-3 md:hidden">
+          <div>
+            <p className="text-[13px] font-bold text-[var(--sidebar-end)]">
+              Account
+            </p>
+            <p className="text-[11px] text-[var(--foreground-muted)] mt-0.5">
+              Sign out of Dayflow on this device
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onLogout}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[var(--alert-soft)] text-[var(--alert)] text-xs font-semibold cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Log out
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -18,6 +18,7 @@ import {
   BarChart3,
   Flame,
   TrendingUp,
+  LogOut,
 } from "lucide-react";
 
 export type NavTab =
@@ -28,12 +29,26 @@ export type NavTab =
   | "growth"
   | "habits"
   | "inbox"
+  | "reports"
   | "settings";
+
+export type NavSection =
+  | "transactions"
+  | "budgets"
+  | "bills"
+  | "debts"
+  | "savings"
+  | "learning"
+  | "career"
+  | "projects"
+  | null;
 
 interface NavbarProps {
   activeTab: NavTab;
-  setActiveTab: (tab: NavTab) => void;
+  activeSection?: NavSection;
+  setActiveTab: (tab: NavTab, section?: NavSection) => void;
   onOpenQuickAdd: () => void;
+  onLogout?: () => void;
   dbConnected: boolean;
   overdueCount: number;
   userName?: string;
@@ -49,22 +64,24 @@ type NavItem = {
 
 function MountainSilhouette() {
   return (
-    <div className="absolute inset-x-0 bottom-0 h-[180px] pointer-events-none overflow-hidden z-0">
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/images/hero-mist.jpg"
         alt=""
-        className="w-full h-full object-cover object-bottom opacity-40 mix-blend-luminosity filter contrast-125"
+        className="absolute inset-x-0 bottom-0 h-full w-full object-cover object-bottom opacity-40 mix-blend-luminosity filter contrast-125"
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0e241c] via-[#16372a]/80 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0e241c]/90 via-[#16372a]/70 to-[#16372a]" />
     </div>
   );
 }
 
 export default function Navbar({
   activeTab,
+  activeSection = null,
   setActiveTab,
   onOpenQuickAdd,
+  onLogout,
   overdueCount,
   userName = "Arjun",
 }: NavbarProps) {
@@ -76,8 +93,8 @@ export default function Navbar({
 
   useEffect(() => {
     if (activeTab === "finance") setMoneyOpen(true);
-    if (activeTab === "growth") setGrowthOpen(true);
-  }, [activeTab]);
+    if (activeTab === "growth" || activeSection === "projects") setGrowthOpen(true);
+  }, [activeTab, activeSection]);
 
   useEffect(() => {
     document.documentElement.style.setProperty(
@@ -86,18 +103,42 @@ export default function Navbar({
     );
   }, [collapsed]);
 
-  const moneyItems = [
-    { label: "Transactions", tab: "finance" as NavTab },
-    { label: "Budgets", tab: "finance" as NavTab },
-    { label: "Bills & EMIs", tab: "finance" as NavTab },
-    { label: "Debts", tab: "finance" as NavTab },
-    { label: "Savings Goals", tab: "finance" as NavTab },
+  useEffect(() => {
+    const nav = document.querySelector(
+      'aside[aria-label="Primary"] nav'
+    ) as HTMLElement | null;
+    const active = nav?.querySelector(
+      '[aria-current="page"]'
+    ) as HTMLElement | null;
+    if (!nav || !active) return;
+
+    active.scrollIntoView({ block: "nearest", inline: "nearest" });
+
+    // Avoid a half-clipped neighbor under the footer looking like a second active item
+    const next = active.nextElementSibling as HTMLElement | null;
+    if (!next) {
+      nav.scrollTop = nav.scrollHeight;
+      return;
+    }
+    const navBottom = nav.getBoundingClientRect().bottom;
+    const nextBottom = next.getBoundingClientRect().bottom;
+    if (next.getBoundingClientRect().top < navBottom && nextBottom > navBottom) {
+      nav.scrollTop += nextBottom - navBottom + 6;
+    }
+  }, [activeTab, activeSection]);
+
+  const moneyItems: { label: string; tab: NavTab; section: NavSection }[] = [
+    { label: "Transactions", tab: "finance", section: "transactions" },
+    { label: "Budgets", tab: "finance", section: "budgets" },
+    { label: "Bills & EMIs", tab: "finance", section: "bills" },
+    { label: "Debts", tab: "finance", section: "debts" },
+    { label: "Savings Goals", tab: "finance", section: "savings" },
   ];
 
-  const growthItems = [
-    { label: "Learning", tab: "growth" as NavTab },
-    { label: "Career", tab: "growth" as NavTab },
-    { label: "Projects", tab: "tasks" as NavTab },
+  const growthItems: { label: string; tab: NavTab; section: NavSection }[] = [
+    { label: "Learning", tab: "growth", section: "learning" },
+    { label: "Career", tab: "growth", section: "career" },
+    { label: "Projects", tab: "tasks", section: "projects" },
   ];
 
   const topItems: NavItem[] = [
@@ -114,9 +155,13 @@ export default function Navbar({
   const bottomItems: NavItem[] = [
     { id: "habits", label: "Habits", icon: Flame },
     { id: "inbox", label: "Notes & Inbox", icon: StickyNote },
-    { id: "settings", label: "Reports", icon: BarChart3, matchActive: false },
+    { id: "reports", label: "Reports", icon: BarChart3 },
     { id: "settings", label: "Settings", icon: Settings },
   ];
+
+  const go = (tab: NavTab, section: NavSection = null) => {
+    setActiveTab(tab, section);
+  };
 
   const mobileItems: NavItem[] = [
     { id: "dashboard", label: "My Day", icon: LayoutDashboard },
@@ -126,7 +171,7 @@ export default function Navbar({
   ];
 
   const linkClass = (selected: boolean) =>
-    `relative w-full flex items-center ${
+    `relative w-full flex items-center scroll-my-1 ${
       collapsed ? "justify-center px-2" : "gap-3 px-3"
     } py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 cursor-pointer df-focus-ring ${
       selected
@@ -145,11 +190,9 @@ export default function Navbar({
         }}
         aria-label="Primary"
       >
-        <div className="relative flex flex-col h-full px-3.5 pt-4 pb-3">
-          <MountainSilhouette />
-
+        <div className="relative flex flex-col h-full min-h-0 px-3.5 pt-4 pb-3">
           <div
-            className={`relative flex items-center mb-5 ${
+            className={`relative z-10 shrink-0 flex items-center mb-5 ${
               collapsed ? "justify-center" : "justify-between gap-2 px-1"
             }`}
           >
@@ -191,7 +234,7 @@ export default function Navbar({
             </button>
           )}
 
-          <nav className="relative flex-1 overflow-y-auto no-scrollbar space-y-1 pb-4">
+          <nav className="relative z-10 flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-1 pb-3 scroll-pb-3 scroll-pt-2">
             {topItems.map((item) => {
               const Icon = item.icon;
               const selected = activeTab === item.id;
@@ -200,7 +243,7 @@ export default function Navbar({
                   key={item.label}
                   type="button"
                   title={collapsed ? item.label : undefined}
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => go(item.id)}
                   aria-current={selected ? "page" : undefined}
                   className={linkClass(selected)}
                 >
@@ -239,13 +282,9 @@ export default function Navbar({
                 aria-expanded={moneyOpen}
                 aria-controls={moneyId}
                 onClick={() => {
-                  if (collapsed) {
-                    setActiveTab("finance");
-                    return;
-                  }
-                  setMoneyOpen((v) => !v);
+                  go("finance");
+                  if (!collapsed) setMoneyOpen(true);
                 }}
-                onDoubleClick={() => setActiveTab("finance")}
                 className={`w-full flex items-center ${
                   collapsed ? "justify-center px-2" : "gap-3 px-3"
                 } py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 cursor-pointer df-focus-ring ${
@@ -264,11 +303,29 @@ export default function Navbar({
                 {!collapsed && (
                   <>
                     <span className="flex-1 text-left">Money</span>
-                    <ChevronDown
-                      className={`w-4 h-4 text-[#8aa090] transition-transform duration-300 ${
-                        moneyOpen ? "rotate-180" : ""
-                      }`}
-                    />
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      aria-label={moneyOpen ? "Collapse Money" : "Expand Money"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMoneyOpen((v) => !v);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setMoneyOpen((v) => !v);
+                        }
+                      }}
+                      className="p-0.5 rounded-md hover:bg-white/10"
+                    >
+                      <ChevronDown
+                        className={`w-4 h-4 text-[#8aa090] transition-transform duration-300 ${
+                          moneyOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </span>
                   </>
                 )}
               </button>
@@ -282,20 +339,33 @@ export default function Navbar({
                   }`}
                 >
                   <div className="overflow-hidden space-y-0.5 pl-4">
-                    {moneyItems.map((item) => (
-                      <button
-                        key={item.label}
-                        type="button"
-                        onClick={() => setActiveTab(item.tab)}
-                        className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] text-[#9db0a2] hover:text-white hover:bg-white/[0.08] transition-all duration-200 cursor-pointer df-focus-ring"
-                      >
-                        <span
-                          className="w-1.5 h-1.5 rounded-full bg-[#8aa090] shrink-0"
-                          aria-hidden
-                        />
-                        {item.label}
-                      </button>
-                    ))}
+                    {moneyItems.map((item) => {
+                      const selected =
+                        activeTab === item.tab && activeSection === item.section;
+                      return (
+                        <button
+                          key={item.label}
+                          type="button"
+                          onClick={() => go(item.tab, item.section)}
+                          aria-current={selected ? "page" : undefined}
+                          className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] transition-all duration-200 cursor-pointer df-focus-ring ${
+                            selected
+                              ? "bg-[var(--sidebar-active)]/25 text-white font-semibold"
+                              : "text-[#9db0a2] hover:text-white hover:bg-white/[0.08]"
+                          }`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                              selected
+                                ? "bg-[var(--sidebar-active)]"
+                                : "bg-[#8aa090]"
+                            }`}
+                            aria-hidden
+                          />
+                          {item.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -309,23 +379,20 @@ export default function Navbar({
                 aria-expanded={growthOpen}
                 aria-controls={growthId}
                 onClick={() => {
-                  if (collapsed) {
-                    setActiveTab("growth");
-                    return;
-                  }
-                  setGrowthOpen((v) => !v);
+                  go("growth");
+                  if (!collapsed) setGrowthOpen(true);
                 }}
                 className={`w-full flex items-center ${
                   collapsed ? "justify-center px-2" : "gap-3 px-3"
                 } py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 cursor-pointer df-focus-ring ${
-                  activeTab === "growth"
+                  activeTab === "growth" || activeSection === "projects"
                     ? "bg-white/10 text-white"
                     : "text-[#b7c6ba] hover:text-white hover:bg-white/[0.08]"
                 }`}
               >
                 <TrendingUp
                   className={`w-[18px] h-[18px] ${
-                    activeTab === "growth"
+                    activeTab === "growth" || activeSection === "projects"
                       ? "text-[var(--sidebar-active)]"
                       : "text-[#8aa090]"
                   }`}
@@ -333,11 +400,31 @@ export default function Navbar({
                 {!collapsed && (
                   <>
                     <span className="flex-1 text-left">Growth</span>
-                    <ChevronDown
-                      className={`w-4 h-4 text-[#8aa090] transition-transform duration-300 ${
-                        growthOpen ? "rotate-180" : ""
-                      }`}
-                    />
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      aria-label={
+                        growthOpen ? "Collapse Growth" : "Expand Growth"
+                      }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setGrowthOpen((v) => !v);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setGrowthOpen((v) => !v);
+                        }
+                      }}
+                      className="p-0.5 rounded-md hover:bg-white/10"
+                    >
+                      <ChevronDown
+                        className={`w-4 h-4 text-[#8aa090] transition-transform duration-300 ${
+                          growthOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </span>
                   </>
                 )}
               </button>
@@ -351,20 +438,36 @@ export default function Navbar({
                   }`}
                 >
                   <div className="overflow-hidden space-y-0.5 pl-4">
-                    {growthItems.map((item) => (
-                      <button
-                        key={item.label}
-                        type="button"
-                        onClick={() => setActiveTab(item.tab)}
-                        className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] text-[#9db0a2] hover:text-white hover:bg-white/[0.08] transition-all duration-200 cursor-pointer df-focus-ring"
-                      >
-                        <span
-                          className="w-1.5 h-1.5 rounded-full bg-[#8aa090] shrink-0"
-                          aria-hidden
-                        />
-                        {item.label}
-                      </button>
-                    ))}
+                    {growthItems.map((item) => {
+                      const selected =
+                        (item.section === "projects"
+                          ? activeTab === "tasks" && activeSection === "projects"
+                          : activeTab === item.tab &&
+                            activeSection === item.section);
+                      return (
+                        <button
+                          key={item.label}
+                          type="button"
+                          onClick={() => go(item.tab, item.section)}
+                          aria-current={selected ? "page" : undefined}
+                          className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] transition-all duration-200 cursor-pointer df-focus-ring ${
+                            selected
+                              ? "bg-[var(--sidebar-active)]/25 text-white font-semibold"
+                              : "text-[#9db0a2] hover:text-white hover:bg-white/[0.08]"
+                          }`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                              selected
+                                ? "bg-[var(--sidebar-active)]"
+                                : "bg-[#8aa090]"
+                            }`}
+                            aria-hidden
+                          />
+                          {item.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -379,7 +482,7 @@ export default function Navbar({
                   key={item.label}
                   type="button"
                   title={collapsed ? item.label : undefined}
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => go(item.id)}
                   aria-current={selected ? "page" : undefined}
                   className={linkClass(selected)}
                 >
@@ -398,11 +501,35 @@ export default function Navbar({
             })}
           </nav>
 
+          <div className="relative z-20 shrink-0 mt-auto -mx-3.5 px-3.5 pt-2 pb-0 border-t border-white/10 space-y-1 overflow-hidden bg-[#16372a]">
+            <MountainSilhouette />
+            {!collapsed && (
+              <div className="relative z-10 px-3 py-2">
+                <p className="text-[12px] font-semibold text-white truncate">
+                  {userName}
+                </p>
+                <p className="text-[10px] text-[#8aa090]">Signed in</p>
+              </div>
+            )}
+            {onLogout && (
+              <button
+                type="button"
+                onClick={onLogout}
+                title={collapsed ? "Log out" : undefined}
+                className={`relative z-10 w-full flex items-center ${
+                  collapsed ? "justify-center px-2" : "gap-3 px-3"
+                } py-2.5 rounded-xl text-[13px] font-medium text-[#b7c6ba] hover:text-white hover:bg-white/[0.08] transition-all duration-200 cursor-pointer df-focus-ring`}
+              >
+                <LogOut className="w-[18px] h-[18px] text-[#8aa090]" />
+                {!collapsed && <span className="flex-1 text-left">Log out</span>}
+              </button>
+            )}
+          </div>
         </div>
       </aside>
 
       {activeTab === "dashboard" && (
-        <header className="md:hidden flex items-center justify-between px-5 pt-3 pb-2 bg-[var(--background)] sticky top-0 z-30">
+        <header className="md:hidden flex items-center justify-between px-5 pt-3 pb-2 bg-[var(--background)] sticky top-0 z-30 df-mobile-topbar">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-2xl bg-[var(--sidebar)] text-[var(--sidebar-active)] flex items-center justify-center shadow-sm">
               <Leaf className="w-4 h-4" />
@@ -414,16 +541,16 @@ export default function Navbar({
           <div className="flex items-center gap-2.5">
             <button
               type="button"
-              onClick={() => setActiveTab("settings")}
+              onClick={() => go("settings")}
               aria-label="Notifications"
-              className="w-9 h-9 rounded-full bg-white border border-[var(--card-border)] flex items-center justify-center text-[var(--sidebar-end)] relative df-focus-ring shadow-sm"
+              className="w-9 h-9 rounded-full bg-white border border-[var(--card-border)] flex items-center justify-center text-[var(--sidebar-end)] relative df-focus-ring shadow-sm df-mobile-glass"
             >
               <Bell className="w-[18px] h-[18px]" />
               <span className="w-2 h-2 rounded-full bg-[var(--alert)] absolute top-1.5 right-1.5 ring-2 ring-white" />
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab("settings")}
+              onClick={() => go("settings")}
               className="w-9 h-9 rounded-full overflow-hidden border-2 border-white shadow-sm bg-[var(--accent-mint)] cursor-pointer df-focus-ring"
               aria-label={`${userName} profile`}
             >
@@ -455,7 +582,7 @@ export default function Navbar({
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => setActiveTab(item.id)}
+                    onClick={() => go(item.id)}
                     aria-label={item.label}
                     aria-current={isActive ? "page" : undefined}
                     className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-2xl transition-all duration-200 df-focus-ring ${
@@ -479,19 +606,21 @@ export default function Navbar({
               })}
               <button
                 type="button"
-                onClick={() => setActiveTab("settings")}
+                onClick={() => go("settings")}
                 aria-label="More"
                 aria-current={
                   activeTab === "settings" ||
                   activeTab === "habits" ||
-                  activeTab === "inbox"
+                  activeTab === "inbox" ||
+                  activeTab === "reports"
                     ? "page"
                     : undefined
                 }
                 className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-2xl transition-all duration-200 df-focus-ring ${
                   activeTab === "settings" ||
                   activeTab === "habits" ||
-                  activeTab === "inbox"
+                  activeTab === "inbox" ||
+                  activeTab === "reports"
                     ? "text-[var(--sidebar)]"
                     : "text-[var(--foreground-subtle)]"
                 }`}
@@ -500,7 +629,8 @@ export default function Navbar({
                   className={`w-5 h-5 ${
                     activeTab === "settings" ||
                     activeTab === "habits" ||
-                    activeTab === "inbox"
+                    activeTab === "inbox" ||
+                    activeTab === "reports"
                       ? "stroke-[2.25]"
                       : "stroke-[1.75]"
                   }`}
@@ -509,7 +639,8 @@ export default function Navbar({
                   className={`text-[10px] leading-none ${
                     activeTab === "settings" ||
                     activeTab === "habits" ||
-                    activeTab === "inbox"
+                    activeTab === "inbox" ||
+                    activeTab === "reports"
                       ? "font-bold"
                       : "font-medium"
                   }`}

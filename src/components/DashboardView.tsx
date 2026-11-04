@@ -10,21 +10,20 @@ import {
   Calendar,
   Coins,
   BarChart3,
-  Wifi,
-  Smartphone,
-  Tv,
   Check,
+  CreditCard,
 } from "lucide-react";
 import { NavTab } from "./Navbar";
 import StatCard from "./dashboard/StatCard";
 import FocusList, { FocusTask } from "./dashboard/FocusList";
 import DonutCard from "./dashboard/DonutCard";
 import LearningProgress from "./dashboard/LearningProgress";
-import PaymentCard from "./dashboard/PaymentCard";
+import PaymentCard, { PaymentItem } from "./dashboard/PaymentCard";
 import ScheduleTimeline from "./dashboard/ScheduleTimeline";
 import HabitStreak from "./dashboard/HabitStreak";
 import QuickNotes from "./dashboard/QuickNotes";
 import DayProgressRing from "./dashboard/DayProgressRing";
+import MobileHeroBanner from "./dashboard/MobileHeroBanner";
 
 interface DashboardProps {
   data: any;
@@ -34,6 +33,45 @@ interface DashboardProps {
   onOpenQuickAdd?: () => void;
 }
 
+const CATEGORY_COLORS: Record<string, string> = {
+  WORK: "#1f4d36",
+  LEARNING: "#2e7d32",
+  PERSONAL: "#66a06f",
+  FINANCE: "#a3c4a8",
+  FOOD: "#7cb342",
+  EMI: "#2e7d32",
+  BILLS: "#1f4d36",
+  RENT: "#3d6b48",
+  TRAVEL: "#66a06f",
+  OTHER: "#c5d9c5",
+};
+
+function formatCategory(cat?: string) {
+  if (!cat) return "Task";
+  return cat.charAt(0) + cat.slice(1).toLowerCase();
+}
+
+function formatDueLabel(dueDate?: string | null) {
+  if (!dueDate) return "No due date";
+  const due = new Date(dueDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  const dueDay = new Date(due);
+  dueDay.setHours(0, 0, 0, 0);
+
+  const label = due.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+  });
+
+  if (dueDay.getTime() === today.getTime()) return `Due today, ${label}`;
+  if (dueDay.getTime() === tomorrow.getTime()) return `Due tomorrow, ${label}`;
+  if (dueDay < today) return `Overdue, ${label}`;
+  return `Due ${label}`;
+}
+
 export default function DashboardView({
   data,
   onNavigate,
@@ -41,41 +79,52 @@ export default function DashboardView({
   onOpenQuickAdd,
 }: DashboardProps) {
   const stats = data?.stats || {};
-  const settings = data?.settings || { userName: "Arjun", currency: "₹" };
-  const userName = settings.userName || "Arjun";
+  const settings = data?.settings || {};
+  const userName = settings.userName || settings.user_name || "there";
   const currency = settings.currency || "₹";
   const dailyQuestions = data?.dailyQuestions || {};
+  const habits = data?.habits || [];
+  const notes = data?.notes || [];
+  const learningGoals = data?.learningGoals || [];
 
   const [search, setSearch] = useState("");
   const [bellRing, setBellRing] = useState(false);
-  const [localDone, setLocalDone] = useState<Record<string, boolean>>({
-    "focus-1": true,
-    "focus-2": false,
-    "focus-3": false,
-    "focus-4": true,
-    "focus-5": true,
-  });
   const [greeting, setGreeting] = useState("Good morning");
-  const [dateLabel, setDateLabel] = useState("Tue, 03 Nov 2026");
+  const [heroImage, setHeroImage] = useState("/images/hero-sunrise.jpg");
+  const [dateLabel, setDateLabel] = useState("");
 
   useEffect(() => {
-    const now = new Date();
-    const hour = now.getHours();
-    setGreeting(
-      hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"
-    );
-    setDateLabel(
-      now.toLocaleDateString("en-GB", {
-        weekday: "short",
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
-    );
+    const syncTimeOfDay = () => {
+      const now = new Date();
+      const hour = now.getHours();
+      if (hour < 12) {
+        setGreeting("Good morning");
+        setHeroImage("/images/hero-sunrise.jpg");
+      } else if (hour < 17) {
+        setGreeting("Good afternoon");
+        setHeroImage("/images/hero-afternoon.jpg");
+      } else {
+        setGreeting("Good evening");
+        setHeroImage("/images/hero-evening.jpg");
+      }
+      setDateLabel(
+        now.toLocaleDateString("en-GB", {
+          weekday: "short",
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })
+      );
+    };
+
+    syncTimeOfDay();
+    // Refresh near hour boundaries so greeting/image stay in sync
+    const interval = window.setInterval(syncTimeOfDay, 60_000);
 
     const t = setTimeout(() => setBellRing(true), 900);
     const clear = setTimeout(() => setBellRing(false), 1800);
     return () => {
+      window.clearInterval(interval);
       clearTimeout(t);
       clearTimeout(clear);
     };
@@ -83,137 +132,180 @@ export default function DashboardView({
 
   const liveTasks = dailyQuestions?.finishToday?.items || [];
 
-  const focusTasks: FocusTask[] = useMemo(() => {
-    if (liveTasks.length > 0) {
-      return liveTasks.slice(0, 5).map((t: any, i: number) => ({
-        id: t.id || t._id || `live-${i}`,
+  const focusTasks: FocusTask[] = useMemo(
+    () =>
+      liveTasks.slice(0, 5).map((t: any, i: number) => ({
+        id: String(t.id || t._id || `live-${i}`),
         title: t.title,
-        category: t.category || "Work",
-        priority: i === 0 ? ("High" as const) : undefined,
-        time:
-          t.time ||
-          ["11:30 AM", "2:00 PM", "4:30 PM", "6:00 PM", "8:00 PM"][i] ||
-          "Today",
+        category: formatCategory(t.category),
+        priority:
+          t.priority === "HIGH" || t.priority === "High"
+            ? ("High" as const)
+            : undefined,
+        time: t.time || "Today",
         done: t.status === "DONE",
-      }));
-    }
-    return [
-      {
-        id: "focus-1",
-        title: "Complete e-commerce UI fixes",
-        category: "Work",
-        time: "11:30 AM",
-        done: true,
-      },
-      {
-        id: "focus-2",
-        title: "Push staging build & test",
-        category: "Work",
-        priority: "High" as const,
-        time: "2:00 PM",
-        done: false,
-      },
-      {
-        id: "focus-3",
-        title: "AI course — Lesson 4 (Gradient Descent)",
-        category: "Learning",
-        time: "7:00 PM",
-        done: false,
-      },
-      {
-        id: "focus-4",
-        title: "Gym — Workout (Lower body)",
-        category: "Health",
-        time: "6:00 PM",
-        done: true,
-      },
-      {
-        id: "focus-5",
-        title: "Review weekly budget",
-        category: "Finance",
-        time: "8:30 PM",
-        done: true,
-      },
-    ];
-  }, [liveTasks]);
+      })),
+    [liveTasks]
+  );
 
-  const isDone = (task: FocusTask) =>
-    task.id.startsWith("focus-") ? !!localDone[task.id] : task.done;
-
-  const completedFocus = focusTasks.filter((t) => isDone(t)).length;
-  const focusTotal = Math.max(focusTasks.length, 5);
+  const completedFocus = focusTasks.filter((t) => t.done).length;
+  const focusTotal = focusTasks.length;
   const visibleFocus = focusTasks.slice(0, 3);
 
-  const dueToday = stats.dueTodayCount ?? stats.todayTasks ?? 5;
-  const overdue = stats.overdueCount ?? 2;
-  const upcoming = stats.upcomingCount ?? 8;
-  const balance = stats.netBalance ?? 10500;
-  const spent = stats.totalExpense ?? 4500;
-  const taskPercent = stats.taskCompletionRate ?? 72;
-  const tasksDone = stats.completedCount ?? 12;
-  const tasksTotal = stats.totalTasks ?? 17;
+  const dueToday = Number(stats.dueTodayCount ?? stats.todayTasks ?? 0);
+  const overdue = Number(stats.overdueCount ?? 0);
+  const upcoming = Number(stats.upcomingCount ?? 0);
+  const balance = Number(stats.netBalance ?? 0);
+  const spent = Number(stats.totalExpense ?? 0);
+  const taskPercent = Number(stats.taskCompletionRate ?? 0);
+  const tasksDone = Number(stats.completedCount ?? 0);
+  const tasksTotal = Number(stats.totalTasks ?? 0);
 
-  const moneySegments = [
-    { value: 40, color: "#1f4d36", label: "Essentials", pct: "40%", amount: "₹1,800" },
-    { value: 30, color: "#2e7d32", label: "Bills & EMI", pct: "30%", amount: "₹1,350" },
-    { value: 17, color: "#7cb342", label: "Food", pct: "17%", amount: "₹750" },
-    { value: 13, color: "#c5d9c5", label: "Others", pct: "13%", amount: "₹600" },
-  ];
+  const moneyItems = dailyQuestions?.moneyToPay?.items || [];
+  const expenseByCategory = useMemo(() => {
+    // Prefer category totals if API ever adds them; otherwise empty until finance page.
+    return [] as { label: string; value: number; color: string; pct: string; amount: string }[];
+  }, []);
 
-  const categoryProgress = [
-    { label: "Work", done: 6, total: 8, color: "#1f4d36" },
-    { label: "Learning", done: 3, total: 4, color: "#2e7d32" },
-    { label: "Personal", done: 2, total: 3, color: "#66a06f" },
-    { label: "Finance", done: 1, total: 2, color: "#a3c4a8" },
-  ];
+  const moneySegments =
+    expenseByCategory.length > 0
+      ? expenseByCategory
+      : spent > 0
+        ? [
+            {
+              value: spent,
+              color: "#1f4d36",
+              label: "This month",
+              pct: "100%",
+              amount: `${currency}${spent.toLocaleString("en-IN")}`,
+            },
+          ]
+        : [];
+
+  const learningItems = dailyQuestions?.careerGrowth?.items || [];
+  const primaryLearning =
+    learningGoals.find((g: any) => g.status === "IN_PROGRESS") ||
+    learningGoals[0] ||
+    learningItems[0];
+
+  const categoryProgress = useMemo(() => {
+    const counts: Record<string, { done: number; total: number }> = {};
+    for (const t of liveTasks) {
+      const key = (t.category || "PERSONAL").toUpperCase();
+      if (!counts[key]) counts[key] = { done: 0, total: 0 };
+      counts[key].total += 1;
+      if (t.status === "DONE") counts[key].done += 1;
+    }
+    return Object.entries(counts).map(([label, v]) => ({
+      label: formatCategory(label),
+      done: v.done,
+      total: v.total,
+      color: CATEGORY_COLORS[label] || "#66a06f",
+    }));
+  }, [liveTasks]);
 
   const taskSegments = categoryProgress.map((c) => ({
-    value: c.done,
+    value: Math.max(c.total, 1),
     color: c.color,
     label: c.label,
   }));
 
-  const schedule = [
-    { time: "11:30 AM", title: "Complete e-commerce UI fixes", tag: "Work", color: "#2e7d32" },
-    { time: "2:00 PM", title: "Push staging build & test", tag: "Work", color: "#d9822b" },
-    { time: "6:00 PM", title: "Gym – Workout (Lower body)", tag: "Health", color: "#2e7d32" },
-    { time: "7:00 PM", title: "AI course – Lesson 4", tag: "Learning", color: "#3b82c4" },
-  ];
+  const schedule = focusTasks.map((t) => ({
+    time: t.time,
+    title: t.title,
+    tag: t.category,
+    color: CATEGORY_COLORS[t.category.toUpperCase()] || "#2e7d32",
+  }));
 
-  const payments = [
-    {
-      title: "Internet bill",
-      amount: 899,
-      due: "Due Tomorrow, 04 Nov",
-      status: "Due Soon",
-      statusTone: "warning" as const,
-      icon: Wifi,
-    },
-    {
-      title: "Phone EMI",
-      amount: 4500,
-      due: "Due 07 Nov",
-      status: "Upcoming",
-      statusTone: "muted" as const,
-      icon: Smartphone,
-    },
-    {
-      title: "OTT Subscription",
-      amount: 299,
-      due: "Due 10 Nov",
-      status: "Paid",
-      statusTone: "success" as const,
-      icon: Tv,
-    },
-  ];
+  const payments: PaymentItem[] = moneyItems.slice(0, 3).map((p: any) => {
+    const due = p.dueDate || p.due_date;
+    const dueDay = due ? new Date(due) : null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    let status = "Upcoming";
+    let statusTone: PaymentItem["statusTone"] = "muted";
+
+    if (p.type === "BILL" || p.reminderStatus) {
+      const daysLeft = Number(p.daysLeft);
+      if (p.reminderStatus === "EXPIRED" || daysLeft < 0) {
+        status = "Expired";
+        statusTone = "warning";
+      } else {
+        status = "About to expire";
+        statusTone = "warning";
+      }
+    } else if (dueDay) {
+      const d = new Date(dueDay);
+      d.setHours(0, 0, 0, 0);
+      if (d.getTime() <= tomorrow.getTime()) {
+        status = d.getTime() <= today.getTime() ? "Due soon" : "Due tomorrow";
+        statusTone = "warning";
+      }
+    }
+
+    const dueLabel =
+      p.type === "BILL" || p.reminderStatus
+        ? p.reminderStatus === "EXPIRED" || Number(p.daysLeft) < 0
+          ? `Plan expired · was ${formatDueLabel(due).replace(/^Due /, "")}`
+          : `Expires in ${Math.max(0, Number(p.daysLeft))} day${Number(p.daysLeft) === 1 ? "" : "s"}`
+        : formatDueLabel(due);
+
+    return {
+      title: p.title || `Payment to ${p.personName || "contact"}`,
+      amount: Number(p.amount || 0),
+      due: dueLabel,
+      status,
+      statusTone,
+      icon: CreditCard,
+    };
+  });
+
+  const nextPayment = payments[0];
+
+  const habitDays = useMemo(() => {
+    const labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const today = new Date();
+    const dayIdx = (today.getDay() + 6) % 7; // Mon=0
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - dayIdx);
+    weekStart.setHours(0, 0, 0, 0);
+
+    return labels.map((day, i) => {
+      const d = new Date(weekStart);
+      d.setDate(weekStart.getDate() + i);
+      const iso = d.toISOString().split("T")[0];
+      const anyDone = habits.some((h: any) =>
+        (h.completedDates || h.completed_dates || []).includes(iso)
+      );
+      return { day, done: anyDone };
+    });
+  }, [habits]);
+
+  const habitStreak = habits.reduce(
+    (max: number, h: any) => Math.max(max, Number(h.streak || 0)),
+    0
+  );
+
+  const noteTitles = notes
+    .map((n: any) => n.title || n.content)
+    .filter(Boolean)
+    .slice(0, 3);
 
   const handleFocusToggle = (task: FocusTask) => {
-    if (task.id.startsWith("focus-")) {
-      setLocalDone((prev) => ({ ...prev, [task.id]: !prev[task.id] }));
-    } else {
-      onTaskToggle(task.id, task.done ? "DONE" : "TODO");
-    }
+    onTaskToggle(task.id, task.done ? "DONE" : "TODO");
   };
+
+  const learningTitle =
+    primaryLearning?.title || "No active learning track";
+  const learningProgress = Number(
+    primaryLearning?.progressPercentage ??
+      primaryLearning?.progress_percentage ??
+      primaryLearning?.progress ??
+      0
+  );
 
   return (
     <div className="w-full pb-16 md:pb-4">
@@ -252,7 +344,9 @@ export default function DashboardView({
             className="relative w-9 h-9 rounded-full bg-white border border-[var(--card-border)] flex items-center justify-center text-[var(--sidebar-end)] hover:bg-[var(--accent-mint)] hover:border-[#c5d9c5] transition-all duration-150 cursor-pointer df-focus-ring"
           >
             <Bell className={`w-4 h-4 ${bellRing ? "df-bell-ring" : ""}`} />
-            <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-[var(--alert)] ring-2 ring-white" />
+            {overdue > 0 && (
+              <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-[var(--alert)] ring-2 ring-white" />
+            )}
           </button>
           <button
             type="button"
@@ -289,18 +383,18 @@ export default function DashboardView({
       {/* Desktop layout */}
       <div className="hidden md:grid grid-cols-1 min-[1140px]:grid-cols-[minmax(0,1fr)_290px] gap-3">
         <div className="space-y-3 min-w-0">
-          {/* Hero */}
           <section className="relative overflow-hidden rounded-[18px] min-h-[96px] border border-[var(--card-border)] shadow-xs group">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/images/hero-sunrise.jpg"
+              key={heroImage}
+              src={heroImage}
               alt=""
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700 group-hover:scale-[1.02]"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-[#f6f5ee]/92 via-[#f6f5ee]/70 to-transparent" />
             <div className="relative z-10 px-6 py-4 flex flex-col justify-center min-h-[96px]">
               <h2 className="font-display text-[22px] md:text-[24px] font-bold text-[var(--sidebar-end)] tracking-tight">
-                {greeting}, {userName} 👋
+                {greeting}, {userName}
               </h2>
               <p className="text-[12px] text-[var(--foreground-muted)] mt-0.5 max-w-lg font-medium">
                 Stay focused, organized and make progress today.
@@ -308,48 +402,72 @@ export default function DashboardView({
             </div>
           </section>
 
-          {/* Stats: 4 side-by-side */}
           <section className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-            <StatCard label="Tasks Due Today" value={Number(dueToday)} icon={CheckSquare} />
+            <StatCard label="Tasks Due Today" value={dueToday} icon={CheckSquare} />
             <StatCard
               label="Overdue"
-              value={Number(overdue)}
+              value={overdue}
               icon={AlertTriangle}
               tone="danger"
             />
-            <StatCard label="Upcoming" value={Number(upcoming)} icon={Calendar} />
+            <StatCard label="Upcoming" value={upcoming} icon={Calendar} />
             <StatCard
               label="Available Balance"
-              value={Number(balance)}
+              value={balance}
               icon={Coins}
               format={(n) => `${currency}${n.toLocaleString("en-IN")}`}
             />
           </section>
 
-          {/* Row 3: Today's Focus & My Money Overview */}
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-stretch">
-            <FocusList
-              tasks={visibleFocus}
-              completed={completedFocus}
-              total={focusTotal}
-              onToggle={handleFocusToggle}
-              onViewAll={() => onNavigate("tasks")}
-              isDone={isDone}
-            />
+            {focusTasks.length > 0 ? (
+              <FocusList
+                tasks={visibleFocus}
+                completed={completedFocus}
+                total={Math.max(focusTotal, 1)}
+                onToggle={handleFocusToggle}
+                onViewAll={() => onNavigate("tasks")}
+                isDone={(t) => t.done}
+              />
+            ) : (
+              <section className="df-card p-4 rounded-[18px] flex flex-col justify-center">
+                <h3 className="text-[14px] font-bold text-[var(--sidebar-end)]">
+                  Today&apos;s Focus
+                </h3>
+                <p className="text-[12px] text-[var(--foreground-muted)] mt-2">
+                  No tasks due today.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onNavigate("tasks")}
+                  className="mt-3 text-[11px] font-semibold text-[var(--sidebar)] self-start"
+                >
+                  View All Tasks →
+                </button>
+              </section>
+            )}
 
             <DonutCard
               title="My Money Overview"
               icon={Coins}
               periodLabel="This Month"
-              segments={moneySegments}
-              centerPrimary={`${currency}${Number(spent).toLocaleString("en-IN")}`}
+              segments={
+                moneySegments.length
+                  ? moneySegments
+                  : [{ value: 1, color: "#eef2ee", label: "None" }]
+              }
+              centerPrimary={`${currency}${spent.toLocaleString("en-IN")}`}
               centerSecondary="Total Spent"
-              legend={moneySegments.map((s) => ({
-                label: s.label,
-                color: s.color,
-                pct: s.pct,
-                amount: s.amount,
-              }))}
+              legend={
+                moneySegments.length
+                  ? moneySegments.map((s) => ({
+                      label: s.label,
+                      color: s.color,
+                      pct: s.pct,
+                      amount: s.amount,
+                    }))
+                  : [{ label: "No expenses yet", color: "#c5d9c5", pct: "—" }]
+              }
               footerLabel="View Details →"
               onFooter={() => onNavigate("finance")}
               onPeriodClick={() => onNavigate("finance")}
@@ -357,72 +475,97 @@ export default function DashboardView({
             />
           </section>
 
-          {/* Row 4: Task Progress & Learning Progress */}
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-stretch">
             <DonutCard
               title="Task Progress"
               icon={BarChart3}
               periodLabel="This Week"
-              segments={taskSegments}
+              segments={
+                taskSegments.length
+                  ? taskSegments
+                  : [{ value: 1, color: "#eef2ee", label: "None" }]
+              }
               centerPrimary={`${Math.round(taskPercent)}%`}
               centerSecondary={`${tasksDone} of ${tasksTotal} tasks`}
-              legend={categoryProgress.map((c) => ({
-                label: c.label,
-                color: c.color,
-                pct: `${c.done}/${c.total}`,
-              }))}
+              legend={
+                categoryProgress.length
+                  ? categoryProgress.map((c) => ({
+                      label: c.label,
+                      color: c.color,
+                      pct: `${c.done}/${c.total}`,
+                    }))
+                  : [{ label: "No tasks yet", color: "#c5d9c5", pct: "—" }]
+              }
               footerLabel="View All Tasks →"
               onFooter={() => onNavigate("tasks")}
               onPeriodClick={() => onNavigate("tasks")}
               delay="200ms"
             />
 
-            <LearningProgress onContinue={() => onNavigate("growth")} />
+            <LearningProgress
+              title={learningTitle}
+              progressPercent={learningProgress}
+              onContinue={() => onNavigate("growth")}
+            />
           </section>
 
-          {/* Row 5: Upcoming Payments & EMIs */}
-          <PaymentCard
-            payments={payments}
-            currency={currency}
-            onViewAll={() => onNavigate("finance")}
-          />
+          {payments.length > 0 && (
+            <PaymentCard
+              payments={payments}
+              currency={currency}
+              onViewAll={() => onNavigate("finance")}
+            />
+          )}
         </div>
 
         <aside
           className="space-y-3 animate-df-fade-up min-[1140px]:sticky min-[1140px]:top-3 min-[1140px]:self-start"
           style={{ animationDelay: "140ms" }}
         >
-          <ScheduleTimeline
-            dateLabel={dateLabel}
-            items={schedule}
-            onSelect={() => onNavigate("schedule")}
+          {schedule.length > 0 && (
+            <ScheduleTimeline
+              dateLabel={dateLabel || "Today"}
+              items={schedule}
+              onSelect={() => onNavigate("schedule")}
+            />
+          )}
+          <HabitStreak
+            streak={habitStreak}
+            initialDays={habitDays}
+            onViewAll={() => onNavigate("habits")}
           />
-          <HabitStreak onViewAll={() => onNavigate("habits")} />
-          <QuickNotes onAdd={onOpenQuickAdd} onViewAll={() => onNavigate("inbox")} />
+          <QuickNotes
+            notes={noteTitles}
+            onAdd={onOpenQuickAdd}
+            onViewAll={() => onNavigate("inbox")}
+          />
         </aside>
       </div>
 
       {/* Mobile — My Day */}
       <div className="md:hidden space-y-4 animate-df-fade-up pb-6">
-        <div>
-          <h1 className="font-display text-[26px] font-bold text-[var(--sidebar-end)] tracking-tight leading-tight">
-            {greeting}, {userName}
-          </h1>
-          <p className="text-[13px] text-[var(--foreground-muted)] mt-1 font-medium">
-            {dateLabel}
-          </p>
-        </div>
+        <MobileHeroBanner
+          tall
+          title={
+            <>
+              {greeting}, {userName}
+            </>
+          }
+          subtitle={
+            dateLabel || "Stay focused, organized and make progress today."
+          }
+        />
 
-        <DayProgressRing percent={Number(taskPercent)} size={124} stroke={11} />
+        <DayProgressRing percent={taskPercent} size={124} stroke={11} />
 
         <div className="grid grid-cols-3 gap-2">
           <button
             type="button"
             onClick={() => onNavigate("tasks")}
-            className="df-card rounded-[16px] px-2.5 py-3 text-center bg-[#fff6f6] border-[#fcd5d5] cursor-pointer df-focus-ring"
+            className="df-card df-mobile-glass rounded-[16px] px-2.5 py-3 text-center bg-[#fff6f6] border-[#fcd5d5] cursor-pointer df-focus-ring"
           >
             <p className="text-[22px] font-bold text-[var(--alert)] leading-none tabular-nums">
-              {Number(overdue)}
+              {overdue}
             </p>
             <p className="text-[11px] font-semibold text-[var(--alert)] mt-1.5">
               Overdue
@@ -431,10 +574,10 @@ export default function DashboardView({
           <button
             type="button"
             onClick={() => onNavigate("tasks")}
-            className="df-card rounded-[16px] px-2.5 py-3 text-center cursor-pointer df-focus-ring"
+            className="df-card df-mobile-glass rounded-[16px] px-2.5 py-3 text-center cursor-pointer df-focus-ring"
           >
             <p className="text-[22px] font-bold text-[var(--sidebar-end)] leading-none tabular-nums">
-              {Number(dueToday)}
+              {dueToday}
             </p>
             <p className="text-[11px] font-semibold text-[var(--foreground-muted)] mt-1.5">
               Due Today
@@ -443,10 +586,10 @@ export default function DashboardView({
           <button
             type="button"
             onClick={() => onNavigate("tasks")}
-            className="df-card rounded-[16px] px-2.5 py-3 text-center cursor-pointer df-focus-ring"
+            className="df-card df-mobile-glass rounded-[16px] px-2.5 py-3 text-center cursor-pointer df-focus-ring"
           >
             <p className="text-[22px] font-bold text-[var(--sidebar-end)] leading-none tabular-nums">
-              {Number(upcoming)}
+              {upcoming}
             </p>
             <p className="text-[11px] font-semibold text-[var(--foreground-muted)] mt-1.5">
               Upcoming
@@ -454,73 +597,86 @@ export default function DashboardView({
           </button>
         </div>
 
-        <section className="rounded-[20px] bg-[var(--sidebar)] text-white p-4 shadow-[0_10px_28px_rgba(22,55,42,0.22)]">
+        <section className="rounded-[20px] bg-[var(--sidebar)] text-white p-4 shadow-[0_10px_28px_rgba(22,55,42,0.22)] df-mobile-glass-deep">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[15px] font-bold tracking-tight">Today&apos;s Focus</h3>
+            <h3 className="text-[15px] font-bold tracking-tight">
+              Today&apos;s Focus
+            </h3>
             <span className="text-[11px] font-medium text-[#c5d9c5]">
               {completedFocus}/{focusTotal}
             </span>
           </div>
-          <ul className="space-y-2.5">
-            {visibleFocus.map((task) => {
-              const done = isDone(task);
-              return (
-                <li key={task.id}>
-                  <button
-                    type="button"
-                    onClick={() => handleFocusToggle(task)}
-                    aria-pressed={done}
-                    className="w-full flex items-center gap-3 text-left cursor-pointer df-focus-ring rounded-xl"
-                  >
-                    <span
-                      className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 border transition-all ${
-                        done
-                          ? "bg-[var(--sidebar-active)] border-[var(--sidebar-active)] text-[var(--sidebar-end)] df-check-pop"
-                          : "border-[#8aa090] bg-transparent"
-                      }`}
-                      aria-hidden
+          {visibleFocus.length === 0 ? (
+            <p className="text-[13px] text-[#a8bbae]">No tasks due today.</p>
+          ) : (
+            <ul className="space-y-2.5">
+              {visibleFocus.map((task) => {
+                const done = task.done;
+                return (
+                  <li key={task.id}>
+                    <button
+                      type="button"
+                      onClick={() => handleFocusToggle(task)}
+                      aria-pressed={done}
+                      className="w-full flex items-center gap-3 text-left cursor-pointer df-focus-ring rounded-xl"
                     >
-                      {done && <Check className="w-3 h-3 stroke-[3]" />}
-                    </span>
-                    <span
-                      className={`flex-1 min-w-0 text-[13px] font-medium truncate ${
-                        done ? "text-[#8aa090] line-through" : "text-white"
-                      }`}
-                    >
-                      {task.title}
-                    </span>
-                    <span className="text-[11px] text-[#a8bbae] font-medium shrink-0">
-                      {task.time}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+                      <span
+                        className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 border transition-all ${
+                          done
+                            ? "bg-[var(--sidebar-active)] border-[var(--sidebar-active)] text-[var(--sidebar-end)] df-check-pop"
+                            : "border-[#8aa090] bg-transparent"
+                        }`}
+                        aria-hidden
+                      >
+                        {done && <Check className="w-3 h-3 stroke-[3]" />}
+                      </span>
+                      <span
+                        className={`flex-1 min-w-0 text-[13px] font-medium truncate ${
+                          done ? "text-[#8aa090] line-through" : "text-white"
+                        }`}
+                      >
+                        {task.title}
+                      </span>
+                      <span className="text-[11px] text-[#a8bbae] font-medium shrink-0">
+                        {task.time}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </section>
 
-        <button
-          type="button"
-          onClick={() => onNavigate("finance")}
-          className="w-full df-card rounded-[18px] p-3.5 flex items-center gap-3 text-left cursor-pointer df-focus-ring"
-        >
-          <div className="w-10 h-10 rounded-xl bg-[var(--accent-mint)] text-[var(--sidebar)] flex items-center justify-center shrink-0">
-            <Wifi className="w-5 h-5" aria-hidden />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-bold text-[var(--sidebar-end)] truncate">
-              Internet bill
-            </p>
-            <p className="text-[11px] text-[var(--foreground-muted)] font-medium mt-0.5">
-              {currency}899 · Upcoming payment
-            </p>
-          </div>
-          <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-[var(--warning-soft)] text-[var(--warning)] shrink-0">
-            Due soon
-          </span>
-        </button>
+        {nextPayment && (
+          <button
+            type="button"
+            onClick={() => onNavigate("finance")}
+            className="w-full df-card rounded-[18px] p-3.5 flex items-center gap-3 text-left cursor-pointer df-focus-ring"
+          >
+            <div className="w-10 h-10 rounded-xl bg-[var(--accent-mint)] text-[var(--sidebar)] flex items-center justify-center shrink-0">
+              <CreditCard className="w-5 h-5" aria-hidden />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-bold text-[var(--sidebar-end)] truncate">
+                {nextPayment.title}
+              </p>
+              <p className="text-[11px] text-[var(--foreground-muted)] font-medium mt-0.5">
+                {currency}
+                {nextPayment.amount.toLocaleString("en-IN")} · Upcoming payment
+              </p>
+            </div>
+            <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-[var(--warning-soft)] text-[var(--warning)] shrink-0">
+              {nextPayment.status}
+            </span>
+          </button>
+        )}
 
-        <HabitStreak onViewAll={() => onNavigate("habits")} />
+        <HabitStreak
+          streak={habitStreak}
+          initialDays={habitDays}
+          onViewAll={() => onNavigate("habits")}
+        />
       </div>
     </div>
   );

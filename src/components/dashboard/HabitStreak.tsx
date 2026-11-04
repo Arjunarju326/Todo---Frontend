@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Check, Flame } from "lucide-react";
 
 type HabitDay = { day: string; done: boolean };
@@ -11,22 +11,26 @@ type HabitStreakProps = {
   onViewAll: () => void;
 };
 
-const DEFAULT_DAYS: HabitDay[] = [
-  { day: "Mon", done: true },
-  { day: "Tue", done: true },
-  { day: "Wed", done: true },
-  { day: "Thu", done: true },
-  { day: "Fri", done: true },
+const EMPTY_DAYS: HabitDay[] = [
+  { day: "Mon", done: false },
+  { day: "Tue", done: false },
+  { day: "Wed", done: false },
+  { day: "Thu", done: false },
+  { day: "Fri", done: false },
   { day: "Sat", done: false },
   { day: "Sun", done: false },
 ];
 
 export default function HabitStreak({
-  streak = 5,
-  initialDays = DEFAULT_DAYS,
+  streak = 0,
+  initialDays = EMPTY_DAYS,
   onViewAll,
 }: HabitStreakProps) {
   const [days, setDays] = useState(initialDays);
+
+  useEffect(() => {
+    setDays(initialDays);
+  }, [initialDays]);
 
   return (
     <section className="df-card df-card-lift p-3.5 sm:p-4 rounded-[18px]">
@@ -42,7 +46,11 @@ export default function HabitStreak({
         </span>
       </div>
 
-      <div className="grid grid-cols-7 gap-1" role="group" aria-label="Weekly habit streak">
+      <div
+        className="grid grid-cols-7 gap-1"
+        role="group"
+        aria-label="Weekly habit streak"
+      >
         {days.map((d, index) => (
           <div key={d.day} className="flex flex-col items-center gap-1">
             <span className="text-[10px] font-medium text-[var(--foreground-muted)]">

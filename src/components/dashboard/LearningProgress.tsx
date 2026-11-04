@@ -7,16 +7,23 @@ type LearningProgressProps = {
   title?: string;
   completed?: number;
   total?: number;
+  progressPercent?: number;
   onContinue: () => void;
 };
 
 export default function LearningProgress({
-  title = "AI Engineering Course",
-  completed = 4,
-  total = 8,
+  title = "No active learning track",
+  completed,
+  total,
+  progressPercent,
   onContinue,
 }: LearningProgressProps) {
-  const pct = Math.round((completed / Math.max(total, 1)) * 100);
+  const pct =
+    progressPercent !== undefined
+      ? Math.round(progressPercent)
+      : Math.round(
+          ((completed ?? 0) / Math.max(total ?? 1, 1)) * 100
+        );
 
   return (
     <section
@@ -41,7 +48,9 @@ export default function LearningProgress({
               {title}
             </h4>
             <p className="text-[10px] text-[var(--foreground-muted)] font-medium mt-0.5">
-              {completed} of {total} lessons completed
+              {completed !== undefined && total !== undefined
+                ? `${completed} of ${total} lessons completed`
+                : `${pct}% complete`}
             </p>
             <div className="flex items-center gap-2 mt-1.5">
               <div
@@ -66,7 +75,7 @@ export default function LearningProgress({
           <button
             type="button"
             onClick={onContinue}
-            aria-label="Play course"
+            aria-label="Continue learning"
             className="w-7 h-7 rounded-full bg-white border border-[#c8d8c8] text-[#1f4d36] flex items-center justify-center hover:bg-[#eaf3ea] transition-all cursor-pointer shadow-xs df-focus-ring shrink-0"
           >
             <Play className="w-3 h-3 fill-current ml-0.5" />

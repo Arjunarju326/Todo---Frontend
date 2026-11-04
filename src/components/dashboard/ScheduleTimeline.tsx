@@ -35,7 +35,7 @@ export default function ScheduleTimeline({
           onClick={onSelect}
           className="flex items-center gap-1 text-[11px] font-medium text-[var(--foreground-muted)] hover:text-[var(--sidebar-end)] transition-colors cursor-pointer"
         >
-          {dateLabel || "Tue, 03 Nov"}
+          {dateLabel || "Today"}
           <ChevronDown className="w-3 h-3 text-[var(--foreground-subtle)]" aria-hidden />
         </button>
       </div>

@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import Navbar, { NavTab } from "@/components/Navbar";
+import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
+import Navbar, { NavTab, NavSection } from "@/components/Navbar";
 import DashboardView from "@/components/DashboardView";
 import ScheduleView from "@/components/ScheduleView";
 import TasksView from "@/components/TasksView";
@@ -9,39 +11,59 @@ import FinanceView from "@/components/FinanceView";
 import GrowthView from "@/components/GrowthView";
 import HabitsView from "@/components/HabitsView";
 import InboxView from "@/components/InboxView";
+import ReportsView from "@/components/ReportsView";
 import SettingsView from "@/components/SettingsView";
 import QuickAddModal from "@/components/QuickAddModal";
+import MobileAtmosphereBackground from "@/components/MobileAtmosphereBackground";
+import { useAuth } from "@/lib/auth";
+import { useMobileAtmosphere } from "@/lib/mobileAtmosphere";
 
 export default function Home() {
+  const router = useRouter();
+  const { user, loading: authLoading, logout } = useAuth();
+  const { enabled: atmosphereOn } = useMobileAtmosphere();
   const [activeTab, setActiveTab] = useState<NavTab>("dashboard");
-  const fallbackDashboard = {
+  const [activeSection, setActiveSection] = useState<NavSection>(null);
+
+  const navigate = (tab: NavTab, section: NavSection = null) => {
+    setActiveTab(tab);
+    setActiveSection(section ?? null);
+  };
+  const emptyDashboard = {
     success: true,
     stats: {},
     settings: { userName: "Arjun", currency: "₹" },
     dailyQuestions: {},
+    habits: [],
+    notes: [],
+    learningGoals: [],
     dbStatus: { connected: false },
   };
 
-  const [dashboardData, setDashboardData] = useState<any>(fallbackDashboard);
-  const [loading, setLoading] = useState(false);
+  const [dashboardData, setDashboardData] = useState<any>(emptyDashboard);
+  const [loading, setLoading] = useState(true);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/login");
+    }
+  }, [authLoading, user, router]);
 
   const fetchDashboardData = useCallback(async () => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 2500);
     try {
-      const res = await fetch("/api/dashboard", { signal: controller.signal });
+      const res = await fetch("/api/dashboard", {
+        signal: controller.signal,
+        credentials: "include",
+      });
+      if (res.status === 401) {
+        router.replace("/login");
+        return;
+      }
       const data = await res.json();
       if (data.success) {
-        if (data.stats.totalTasks === 0 && data.stats.totalIncome === 0) {
-          await fetch("/api/seed", { method: "POST" });
-          const refreshedRes = await fetch("/api/dashboard");
-          const refreshedData = await refreshedRes.json();
-          if (refreshedData.success) {
-            setDashboardData(refreshedData);
-            return;
-          }
-        }
         setDashboardData(data);
       }
     } catch (err) {
@@ -50,17 +72,26 @@ export default function Home() {
       clearTimeout(timeout);
       setLoading(false);
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+    if (user) {
+      setLoading(true);
+      fetchDashboardData();
+    }
+  }, [user, fetchDashboardData]);
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace("/login");
+  };
 
   const handleTaskToggle = async (taskId: string, currentStatus: string) => {
     const newStatus = currentStatus === "DONE" ? "TODO" : "DONE";
     try {
       await fetch("/api/tasks", {
         method: "PUT",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: taskId, status: newStatus }),
       });
@@ -71,20 +102,39 @@ export default function Home() {
   };
 
   const isDashboard = activeTab === "dashboard";
+  const displayName =
+    dashboardData?.settings?.userName || user?.displayName || user?.username || "Arjun";
+
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
+        <Loader2 className="w-6 h-6 text-[var(--sidebar)] animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-[var(--background)] text-[var(--foreground)] selection:bg-[var(--sidebar)] selection:text-white font-sans antialiased">
+    <div
+      className={`min-h-screen flex flex-col md:flex-row text-[var(--foreground)] selection:bg-[var(--sidebar)] selection:text-white font-sans antialiased relative ${
+        atmosphereOn
+          ? "bg-transparent md:bg-[var(--background)]"
+          : "bg-[var(--background)]"
+      }`}
+    >
+      <MobileAtmosphereBackground />
       <Navbar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        activeSection={activeSection}
+        setActiveTab={navigate}
         onOpenQuickAdd={() => setQuickAddOpen(true)}
+        onLogout={handleLogout}
         dbConnected={dashboardData?.dbStatus?.connected ?? true}
         overdueCount={dashboardData?.stats?.overdueCount || 0}
-        userName={dashboardData?.settings?.userName || "Arjun"}
+        userName={displayName}
       />
 
       <main
-        className={`flex-1 md:ml-[var(--sidebar-width)] w-full min-h-screen overflow-y-auto transition-[margin,padding] duration-300 pb-28 md:pb-4 ${
+        className={`relative z-10 flex-1 md:ml-[var(--sidebar-width)] w-full min-h-screen overflow-y-auto transition-[margin,padding] duration-300 pb-28 md:pb-4 ${
           isDashboard
             ? "px-4 pt-1 sm:p-4 lg:p-4 xl:p-5"
             : "px-4 pt-1 sm:p-5 md:p-8 lg:p-10 max-w-7xl mx-auto"
@@ -104,7 +154,7 @@ export default function Home() {
             {activeTab === "dashboard" && (
               <DashboardView
                 data={dashboardData}
-                onNavigate={(tab) => setActiveTab(tab)}
+                onNavigate={(tab) => navigate(tab)}
                 onTaskToggle={handleTaskToggle}
                 onRefresh={fetchDashboardData}
                 onOpenQuickAdd={() => setQuickAddOpen(true)}
@@ -113,7 +163,7 @@ export default function Home() {
 
             {activeTab === "schedule" && (
               <ScheduleView
-                onBack={() => setActiveTab("dashboard")}
+                onBack={() => navigate("dashboard")}
                 onOpenQuickAdd={() => setQuickAddOpen(true)}
               />
             )}
@@ -125,11 +175,14 @@ export default function Home() {
             {activeTab === "finance" && (
               <FinanceView
                 currency={dashboardData?.settings?.currency || "₹"}
+                section={activeSection}
                 onRefreshDashboard={fetchDashboardData}
               />
             )}
 
-            {activeTab === "growth" && <GrowthView />}
+            {activeTab === "growth" && (
+              <GrowthView section={activeSection} />
+            )}
 
             {activeTab === "habits" && (
               <HabitsView onRefreshDashboard={fetchDashboardData} />
@@ -137,8 +190,19 @@ export default function Home() {
 
             {activeTab === "inbox" && <InboxView />}
 
+            {activeTab === "reports" && (
+              <ReportsView
+                data={dashboardData}
+                currency={dashboardData?.settings?.currency || "₹"}
+                onNavigate={(tab) => navigate(tab as NavTab)}
+              />
+            )}
+
             {activeTab === "settings" && (
-              <SettingsView onRefreshDashboard={fetchDashboardData} />
+              <SettingsView
+                onRefreshDashboard={fetchDashboardData}
+                onLogout={handleLogout}
+              />
             )}
           </div>
         )}

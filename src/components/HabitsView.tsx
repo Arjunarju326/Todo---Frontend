@@ -10,6 +10,7 @@ import {
   Trash2,
   Trophy,
 } from "lucide-react";
+import MobileHeroBanner from "./dashboard/MobileHeroBanner";
 
 interface Habit {
   _id: string;
@@ -127,10 +128,26 @@ export default function HabitsView({
     }
   };
 
+  const addHabitBtn = (
+    <button
+      onClick={() => setIsAdding(!isAdding)}
+      className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-[var(--sidebar)] hover:bg-[var(--sidebar-soft)] text-white font-medium text-xs shadow-xs transition-all cursor-pointer df-focus-ring"
+    >
+      <Plus className="w-4 h-4 stroke-[2.5]" />
+      <span>New Habit</span>
+    </button>
+  );
+
   return (
-    <div className="space-y-6 pb-28 md:pb-16 max-w-5xl mx-auto px-1 md:px-4">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
+    <div className="space-y-6 pb-28 md:pb-16 max-w-5xl mx-auto px-1 md:px-4 df-stagger">
+      <MobileHeroBanner
+        title="Habits & Routine"
+        subtitle="Build streaks and stay consistent"
+        actions={addHabitBtn}
+      />
+
+      {/* Desktop header */}
+      <div className="hidden md:flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
         <div>
           <h1 className="text-xl md:text-2xl font-extrabold text-[#1A1D20] tracking-tight flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-[#191D23]" />
@@ -140,14 +157,7 @@ export default function HabitsView({
             Consistent daily progress, deep focus routines, and self-discipline
           </p>
         </div>
-
-        <button
-          onClick={() => setIsAdding(!isAdding)}
-          className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-[#191D23] hover:bg-[#2C3440] text-white font-medium text-xs shadow-xs transition-all self-start sm:self-auto cursor-pointer"
-        >
-          <Plus className="w-4 h-4 stroke-[2.5]" />
-          <span>New Daily Habit</span>
-        </button>
+        {addHabitBtn}
       </div>
 
       {/* Add Habit Form */}
@@ -232,11 +242,11 @@ export default function HabitsView({
           No habits tracked yet. Start building your consistency today!
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3 df-stagger-fast">
           {habits.map((habit) => (
             <div
               key={habit._id}
-              className="p-4 rounded-3xl bg-white border border-[#EAE5DC] hover:border-[#D9D3C7] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all"
+              className="df-card df-card-lift p-4 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-[#E6EDE3] text-[#2F4D2E] flex items-center justify-center font-bold">

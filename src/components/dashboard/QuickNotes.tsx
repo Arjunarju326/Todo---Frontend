@@ -9,14 +9,8 @@ type QuickNotesProps = {
   onViewAll: () => void;
 };
 
-const DEFAULT_NOTES = [
-  "Buy gym conditioner & protein",
-  "Follow up on job application – NexCrest",
-  "Idea: Automate expense tags",
-];
-
 export default function QuickNotes({
-  notes = DEFAULT_NOTES,
+  notes = [],
   onAdd,
   onViewAll,
 }: QuickNotesProps) {
@@ -41,41 +35,49 @@ export default function QuickNotes({
         </button>
       </div>
 
-      <ul className="space-y-1">
-        {notes.map((note, i) => {
-          const checked = !!done[i];
-          return (
-            <li key={note}>
-              <button
-                type="button"
-                onClick={() => setDone((prev) => ({ ...prev, [i]: !prev[i] }))}
-                aria-pressed={checked}
-                className="w-full flex items-center gap-2 px-1.5 py-1 rounded-lg hover:bg-[var(--accent-mint)] transition-colors duration-150 cursor-pointer text-left df-focus-ring group"
-              >
-                <span
-                  className={`w-3.5 h-3.5 rounded-[4px] border flex items-center justify-center shrink-0 transition-all ${
-                    checked
-                      ? "bg-[#2e7d32] border-[#2e7d32] text-white df-check-pop"
-                      : "border-[#b8c6b8] bg-white group-hover:border-[#2e7d32]"
-                  }`}
-                  aria-hidden
+      {notes.length === 0 ? (
+        <p className="text-[11px] text-[var(--foreground-muted)] py-2">
+          No notes yet.
+        </p>
+      ) : (
+        <ul className="space-y-1">
+          {notes.map((note, i) => {
+            const checked = !!done[i];
+            return (
+              <li key={`${note}-${i}`}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDone((prev) => ({ ...prev, [i]: !prev[i] }))
+                  }
+                  aria-pressed={checked}
+                  className="w-full flex items-center gap-2 px-1.5 py-1 rounded-lg hover:bg-[var(--accent-mint)] transition-colors duration-150 cursor-pointer text-left df-focus-ring group"
                 >
-                  {checked && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                </span>
-                <p
-                  className={`text-[11px] font-medium leading-snug truncate ${
-                    checked
-                      ? "text-[var(--foreground-subtle)] df-strike"
-                      : "text-[#374151]"
-                  }`}
-                >
-                  {note}
-                </p>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+                  <span
+                    className={`w-3.5 h-3.5 rounded-[4px] border flex items-center justify-center shrink-0 transition-all ${
+                      checked
+                        ? "bg-[#2e7d32] border-[#2e7d32] text-white df-check-pop"
+                        : "border-[#b8c6b8] bg-white group-hover:border-[#2e7d32]"
+                    }`}
+                    aria-hidden
+                  >
+                    {checked && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                  </span>
+                  <p
+                    className={`text-[11px] font-medium leading-snug truncate ${
+                      checked
+                        ? "text-[var(--foreground-subtle)] df-strike"
+                        : "text-[#374151]"
+                    }`}
+                  >
+                    {note}
+                  </p>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
 
       <div className="flex justify-end mt-1.5 pt-0.5">
         <button
