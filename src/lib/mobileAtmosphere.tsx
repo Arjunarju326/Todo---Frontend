@@ -9,6 +9,7 @@ import React, {
   useState,
 } from "react";
 
+/** Full-bleed mobile wallpapers (kept separate from hero card art). */
 export const MOBILE_BG_IMAGES = [
   "/images/mobile-bg/bg-01-sakura.jpg",
   "/images/mobile-bg/bg-02-bamboo.jpg",
@@ -26,18 +27,6 @@ export const MOBILE_BG_IMAGES = [
   "/images/mobile-bg/bg-14-canyon.jpg",
   "/images/mobile-bg/bg-15-highlands.jpg",
   "/images/mobile-bg/bg-16-canopy.jpg",
-  "/images/mobile-bg/hero-sunrise.jpg",
-  "/images/mobile-bg/hero-afternoon.jpg",
-  "/images/mobile-bg/hero-evening.jpg",
-  "/images/mobile-bg/hero-mist.jpg",
-  "/images/mobile-bg/hero-lake.jpg",
-  "/images/mobile-bg/hero-forest.jpg",
-  "/images/mobile-bg/hero-valley.jpg",
-  "/images/mobile-bg/hero-peaks.jpg",
-  "/images/mobile-bg/hero-meadow.jpg",
-  "/images/mobile-bg/hero-river.jpg",
-  "/images/mobile-bg/hero-coast.jpg",
-  "/images/mobile-bg/hero-hills.jpg",
 ] as const;
 
 export const MOBILE_BG_ROTATE_MS = 2 * 60 * 1000;

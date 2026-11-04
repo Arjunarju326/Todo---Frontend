@@ -354,6 +354,15 @@ body {
     0 4px 10px -2px rgba(22, 55, 42, 0.05);
 }
 
+/* Fixed atmosphere layers: isolate compositing to reduce mobile scroll flicker */
+.df-atmosphere-root,
+.df-atmosphere-layer {
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  contain: paint;
+}
+
 /* --- Mobile scenic atmosphere (glass cards + clear canvas) --- */
 @media (max-width: 767px) {
   html.df-mobile-atmosphere-on .df-card {
@@ -412,28 +421,34 @@ body {
   }
 
   html.df-mobile-atmosphere-on .df-mobile-topbar {
-    background: rgba(246, 245, 238, 0.42) !important;
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    background: rgba(246, 245, 238, 0.72) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
   }
 
+  /* Hero card keeps its own image (not a fade of the page wallpaper) */
   html.df-mobile-atmosphere-on .df-mobile-hero {
     background: transparent;
-    border-color: rgba(255, 255, 255, 0.4);
-    box-shadow: none;
+    border-color: rgba(255, 255, 255, 0.55);
+    box-shadow:
+      0 4px 14px rgba(22, 55, 42, 0.1),
+      0 12px 28px rgba(22, 55, 42, 0.12);
   }
 
   html.df-mobile-atmosphere-on .df-mobile-hero img {
-    opacity: 0.55;
+    opacity: 1;
   }
 
   html.df-mobile-atmosphere-on .df-mobile-hero .df-mobile-hero-scrim {
     background: linear-gradient(
       90deg,
-      rgba(246, 245, 238, 0.72) 0%,
-      rgba(246, 245, 238, 0.45) 55%,
-      rgba(246, 245, 238, 0.12) 100%
+      rgba(246, 245, 238, 0.88) 0%,
+      rgba(246, 245, 238, 0.55) 55%,
+      rgba(246, 245, 238, 0.18) 100%
     );
   }
 }

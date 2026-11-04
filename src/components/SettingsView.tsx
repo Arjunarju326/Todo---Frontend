@@ -132,8 +132,8 @@ export default function SettingsView({
                 Scenic backgrounds
               </h3>
               <p className="text-[11px] text-[var(--foreground-muted)] mt-0.5 leading-relaxed">
-                Full-screen nature wallpapers with glass cards. Rotates every 2
-                minutes across {imageCount} scenes.
+                Full-screen wallpapers with glass cards. Top banner uses its own
+                art. Rotates every 2 minutes across {imageCount} scenes.
               </p>
             </div>
           </div>

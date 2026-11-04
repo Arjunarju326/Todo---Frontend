@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, type ReactNode } from "react";
-import { useMobileAtmosphere } from "@/lib/mobileAtmosphere";
 
+/** Top-card art — independent from the full-screen atmosphere pool. */
 export const MOBILE_HERO_IMAGES = [
   "/images/hero-sunrise.jpg",
   "/images/hero-afternoon.jpg",
@@ -44,34 +44,60 @@ export default function MobileHeroBanner({
   className = "",
   rotate,
 }: MobileHeroBannerProps) {
-  const { enabled: atmosphereOn, currentImage } = useMobileAtmosphere();
   const shouldRotate = rotate ?? !image;
   const [index, setIndex] = useState(0);
-  const [ready, setReady] = useState(false);
+  const [showA, setShowA] = useState(true);
+  const [layerA, setLayerA] = useState(MOBILE_HERO_IMAGES[0]);
+  const [layerB, setLayerB] = useState(MOBILE_HERO_IMAGES[0]);
+  const [primed, setPrimed] = useState(false);
 
   useEffect(() => {
-    if (!shouldRotate || atmosphereOn) return;
-    setIndex(pickInitialIndex());
-    setReady(true);
+    if (!shouldRotate) {
+      const fixed = image || MOBILE_HERO_IMAGES[0];
+      setLayerA(fixed);
+      setLayerB(fixed);
+      setShowA(true);
+      setPrimed(false);
+      return;
+    }
+
+    const start = pickInitialIndex();
+    const startSrc = MOBILE_HERO_IMAGES[start];
+    setIndex(start);
+    setLayerA(startSrc);
+    setLayerB(startSrc);
+    setShowA(true);
+    setPrimed(true);
+
     const id = window.setInterval(() => {
       setIndex((i) => (i + 1) % MOBILE_HERO_IMAGES.length);
     }, ROTATE_MS);
     return () => window.clearInterval(id);
-  }, [shouldRotate, atmosphereOn]);
+  }, [shouldRotate, image]);
 
   useEffect(() => {
-    if (!shouldRotate || !ready || atmosphereOn) return;
+    if (!shouldRotate || !primed) return;
+    const next = MOBILE_HERO_IMAGES[index] || MOBILE_HERO_IMAGES[0];
+    if (showA) {
+      if (layerA === next) return;
+      setLayerB(next);
+      setShowA(false);
+    } else {
+      if (layerB === next) return;
+      setLayerA(next);
+      setShowA(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- crossfade on index only
+  }, [index, shouldRotate, primed]);
+
+  useEffect(() => {
+    if (!shouldRotate || !primed) return;
     const next = MOBILE_HERO_IMAGES[(index + 1) % MOBILE_HERO_IMAGES.length];
     const img = new window.Image();
     img.src = next;
-  }, [index, shouldRotate, ready, atmosphereOn]);
+  }, [index, shouldRotate, primed]);
 
-  // When full-screen atmosphere is on, mirror that image in the hero for cohesion
-  const src = atmosphereOn
-    ? currentImage
-    : shouldRotate
-      ? MOBILE_HERO_IMAGES[index] || MOBILE_HERO_IMAGES[0]
-      : image || MOBILE_HERO_IMAGES[0];
+  const staticSrc = image || MOBILE_HERO_IMAGES[0];
 
   return (
     <section
@@ -79,13 +105,36 @@ export default function MobileHeroBanner({
         tall ? "min-h-[148px]" : "min-h-[112px]"
       } ${className}`}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        key={src}
-        src={src}
-        alt=""
-        className="absolute inset-0 w-full h-full object-cover scale-[1.02] animate-df-fade-in transition-opacity duration-700"
-      />
+      {shouldRotate ? (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={layerA}
+            alt=""
+            decoding="async"
+            className={`absolute inset-0 w-full h-full object-cover scale-[1.02] transition-opacity duration-700 ease-in-out ${
+              showA ? "opacity-100" : "opacity-0"
+            }`}
+          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={layerB}
+            alt=""
+            decoding="async"
+            className={`absolute inset-0 w-full h-full object-cover scale-[1.02] transition-opacity duration-700 ease-in-out ${
+              showA ? "opacity-0" : "opacity-100"
+            }`}
+          />
+        </>
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={staticSrc}
+          alt=""
+          decoding="async"
+          className="absolute inset-0 w-full h-full object-cover scale-[1.02]"
+        />
+      )}
       <div className="df-mobile-hero-scrim absolute inset-0 bg-gradient-to-r from-[#f6f5ee]/95 via-[#f6f5ee]/78 to-[#f6f5ee]/28" />
       <div className="absolute inset-0 bg-gradient-to-t from-[var(--background)]/55 via-transparent to-transparent" />
       <div

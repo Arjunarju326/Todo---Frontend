@@ -29,6 +29,10 @@ export const metadata: Metadata = {
   title: "Dayflow — Personal Organizer",
   description:
     "Desktop life dashboard for tasks, money, learning, habits, schedule, and daily focus.",
+  icons: {
+    icon: [{ url: "/images/avatar.jpg", type: "image/jpeg" }],
+    apple: [{ url: "/images/avatar.jpg", type: "image/jpeg" }],
+  },
 };
 
 export default function RootLayout({
