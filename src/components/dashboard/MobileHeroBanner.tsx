@@ -47,8 +47,8 @@ export default function MobileHeroBanner({
   const shouldRotate = rotate ?? !image;
   const [index, setIndex] = useState(0);
   const [showA, setShowA] = useState(true);
-  const [layerA, setLayerA] = useState(MOBILE_HERO_IMAGES[0]);
-  const [layerB, setLayerB] = useState(MOBILE_HERO_IMAGES[0]);
+  const [layerA, setLayerA] = useState<string>(MOBILE_HERO_IMAGES[0]);
+  const [layerB, setLayerB] = useState<string>(MOBILE_HERO_IMAGES[0]);
   const [primed, setPrimed] = useState(false);
 
   useEffect(() => {
