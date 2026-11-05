@@ -339,7 +339,7 @@ export default function DashboardView({
         <div className="flex items-center justify-end gap-2 min-w-0">
           <button
             type="button"
-            onClick={() => onNavigate("settings")}
+            onClick={() => onNavigate("inbox")}
             aria-label="Notifications"
             className="relative w-9 h-9 rounded-full bg-white border border-[var(--card-border)] flex items-center justify-center text-[var(--sidebar-end)] hover:bg-[var(--accent-mint)] hover:border-[#c5d9c5] transition-all duration-150 cursor-pointer df-focus-ring"
           >

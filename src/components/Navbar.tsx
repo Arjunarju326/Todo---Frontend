@@ -6,7 +6,6 @@ import {
   CalendarDays,
   CheckSquare,
   Wallet,
-  GraduationCap,
   Leaf,
   StickyNote,
   Settings,
@@ -163,11 +162,13 @@ export default function Navbar({
     setActiveTab(tab, section);
   };
 
-  const mobileItems: NavItem[] = [
+  const mobileLeftItems: NavItem[] = [
     { id: "dashboard", label: "My Day", icon: LayoutDashboard },
     { id: "tasks", label: "Tasks", icon: CheckSquare },
+  ];
+
+  const mobileRightItems: NavItem[] = [
     { id: "finance", label: "Money", icon: Wallet },
-    { id: "growth", label: "Growth", icon: GraduationCap },
   ];
 
   const linkClass = (selected: boolean) =>
@@ -541,12 +542,14 @@ export default function Navbar({
           <div className="flex items-center gap-2.5">
             <button
               type="button"
-              onClick={() => go("settings")}
+              onClick={() => go("inbox")}
               aria-label="Notifications"
               className="w-9 h-9 rounded-full bg-white border border-[var(--card-border)] flex items-center justify-center text-[var(--sidebar-end)] relative df-focus-ring shadow-sm df-mobile-glass"
             >
               <Bell className="w-[18px] h-[18px]" />
-              <span className="w-2 h-2 rounded-full bg-[var(--alert)] absolute top-1.5 right-1.5 ring-2 ring-white" />
+              {overdueCount > 0 && (
+                <span className="w-2 h-2 rounded-full bg-[var(--alert)] absolute top-1.5 right-1.5 ring-2 ring-white" />
+              )}
             </button>
             <button
               type="button"
@@ -569,96 +572,134 @@ export default function Navbar({
       )}
 
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 pointer-events-none">
-        <div className="px-3 pb-3 pt-8">
-          <div className="relative flex items-end gap-2">
-            <nav
-              className="nav-island flex-1 rounded-[28px] px-1.5 py-2 flex items-end justify-between pointer-events-auto shadow-xl"
-              aria-label="Mobile"
-            >
-              {mobileItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => go(item.id)}
-                    aria-label={item.label}
-                    aria-current={isActive ? "page" : undefined}
-                    className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-2xl transition-all duration-200 df-focus-ring ${
-                      isActive
-                        ? "text-[var(--sidebar)]"
-                        : "text-[var(--foreground-subtle)]"
-                    }`}
-                  >
-                    <Icon
-                      className={`w-5 h-5 ${isActive ? "stroke-[2.25]" : "stroke-[1.75]"}`}
-                    />
-                    <span
-                      className={`text-[10px] leading-none truncate ${
-                        isActive ? "font-bold" : "font-medium"
-                      }`}
-                    >
-                      {item.label}
-                    </span>
-                  </button>
-                );
-              })}
-              <button
-                type="button"
-                onClick={() => go("settings")}
-                aria-label="More"
-                aria-current={
-                  activeTab === "settings" ||
-                  activeTab === "habits" ||
-                  activeTab === "inbox" ||
-                  activeTab === "reports"
-                    ? "page"
-                    : undefined
-                }
-                className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-2xl transition-all duration-200 df-focus-ring ${
-                  activeTab === "settings" ||
-                  activeTab === "habits" ||
-                  activeTab === "inbox" ||
-                  activeTab === "reports"
-                    ? "text-[var(--sidebar)]"
-                    : "text-[var(--foreground-subtle)]"
-                }`}
-              >
-                <Settings
-                  className={`w-5 h-5 ${
-                    activeTab === "settings" ||
-                    activeTab === "habits" ||
-                    activeTab === "inbox" ||
-                    activeTab === "reports"
-                      ? "stroke-[2.25]"
-                      : "stroke-[1.75]"
-                  }`}
-                />
-                <span
-                  className={`text-[10px] leading-none ${
-                    activeTab === "settings" ||
-                    activeTab === "habits" ||
-                    activeTab === "inbox" ||
-                    activeTab === "reports"
-                      ? "font-bold"
-                      : "font-medium"
+        <div className="px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-10">
+          <nav
+            className="nav-island relative rounded-[30px] px-1.5 pt-2.5 pb-2 flex items-end justify-between pointer-events-auto shadow-xl"
+            aria-label="Mobile"
+          >
+            {mobileLeftItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => go(item.id)}
+                  aria-label={item.label}
+                  aria-current={isActive ? "page" : undefined}
+                  className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-2xl transition-all duration-200 df-focus-ring ${
+                    isActive
+                      ? "text-[var(--sidebar)]"
+                      : "text-[var(--foreground-subtle)]"
                   }`}
                 >
-                  More
-                </span>
+                  <Icon
+                    className={`w-5 h-5 ${isActive ? "stroke-[2.25]" : "stroke-[1.75]"}`}
+                  />
+                  <span
+                    className={`text-[10px] leading-none truncate ${
+                      isActive ? "font-bold" : "font-medium"
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+                </button>
+              );
+            })}
+
+            <div className="w-[3.5rem] shrink-0 flex flex-col items-center justify-end relative">
+              <button
+                type="button"
+                onClick={onOpenQuickAdd}
+                aria-label="Add item"
+                className="absolute -top-9 w-[3.35rem] h-[3.35rem] rounded-full bg-[var(--sidebar)] text-white flex items-center justify-center shadow-[0_10px_24px_rgba(31,77,54,0.38)] ring-[5px] ring-white hover:bg-[var(--sidebar-soft)] transition-all duration-200 active:scale-95 cursor-pointer df-focus-ring"
+              >
+                <Plus className="w-6 h-6 stroke-[2.5]" />
               </button>
-            </nav>
+              <span className="text-[10px] font-semibold text-[var(--foreground-subtle)] pt-7 pb-0.5">
+                Add
+              </span>
+            </div>
+
+            {mobileRightItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => go(item.id)}
+                  aria-label={item.label}
+                  aria-current={isActive ? "page" : undefined}
+                  className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-2xl transition-all duration-200 df-focus-ring ${
+                    isActive
+                      ? "text-[var(--sidebar)]"
+                      : "text-[var(--foreground-subtle)]"
+                  }`}
+                >
+                  <Icon
+                    className={`w-5 h-5 ${isActive ? "stroke-[2.25]" : "stroke-[1.75]"}`}
+                  />
+                  <span
+                    className={`text-[10px] leading-none truncate ${
+                      isActive ? "font-bold" : "font-medium"
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+                </button>
+              );
+            })}
 
             <button
               type="button"
-              onClick={onOpenQuickAdd}
-              aria-label="Add item"
-              className="pointer-events-auto mb-1 w-12 h-12 shrink-0 rounded-full bg-[var(--sidebar)] text-white flex items-center justify-center shadow-[0_8px_20px_rgba(31,77,54,0.35)] hover:bg-[var(--sidebar-soft)] transition-all duration-200 active:scale-95 cursor-pointer df-focus-ring"
+              onClick={() => go("settings")}
+              aria-label="More"
+              aria-current={
+                activeTab === "settings" ||
+                activeTab === "habits" ||
+                activeTab === "inbox" ||
+                activeTab === "reports" ||
+                activeTab === "growth"
+                  ? "page"
+                  : undefined
+              }
+              className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-2xl transition-all duration-200 df-focus-ring ${
+                activeTab === "settings" ||
+                activeTab === "habits" ||
+                activeTab === "inbox" ||
+                activeTab === "reports" ||
+                activeTab === "growth"
+                  ? "text-[var(--sidebar)]"
+                  : "text-[var(--foreground-subtle)]"
+              }`}
             >
-              <Plus className="w-6 h-6 stroke-[2.5]" />
+              <Settings
+                className={`w-5 h-5 ${
+                  activeTab === "settings" ||
+                  activeTab === "habits" ||
+                  activeTab === "inbox" ||
+                  activeTab === "reports" ||
+                  activeTab === "growth"
+                    ? "stroke-[2.25]"
+                    : "stroke-[1.75]"
+                }`}
+              />
+              <span
+                className={`text-[10px] leading-none ${
+                  activeTab === "settings" ||
+                  activeTab === "habits" ||
+                  activeTab === "inbox" ||
+                  activeTab === "reports" ||
+                  activeTab === "growth"
+                    ? "font-bold"
+                    : "font-medium"
+                }`}
+              >
+                More
+              </span>
             </button>
-          </div>
+          </nav>
         </div>
       </div>
     </>

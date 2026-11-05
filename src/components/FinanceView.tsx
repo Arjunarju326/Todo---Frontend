@@ -7,6 +7,8 @@ import {
   Trash2,
   Users,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CreditCard,
 } from "lucide-react";
 import DonutChart from "./dashboard/DonutChart";
@@ -109,6 +111,11 @@ export default function FinanceView({
     () => new Date().toISOString().slice(0, 10)
   );
   const [billPlanDays, setBillPlanDays] = useState("28");
+  const [monthCursor, setMonthCursor] = useState(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), 1);
+  });
+  const [monthOpen, setMonthOpen] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -176,18 +183,27 @@ export default function FinanceView({
         : ""
     }`;
 
-  const totalIncome = transactions
+  const monthTransactions = useMemo(() => {
+    const y = monthCursor.getFullYear();
+    const m = monthCursor.getMonth();
+    return transactions.filter((t) => {
+      const d = new Date(t.date);
+      return d.getFullYear() === y && d.getMonth() === m;
+    });
+  }, [transactions, monthCursor]);
+
+  const totalIncome = monthTransactions
     .filter((t) => t.type === "INCOME")
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpense = transactions
+  const totalExpense = monthTransactions
     .filter((t) => t.type === "EXPENSE")
     .reduce((sum, t) => sum + t.amount, 0);
 
   const balance = totalIncome - totalExpense;
 
   const spending = useMemo(() => {
-    const expenses = transactions.filter((t) => t.type === "EXPENSE");
+    const expenses = monthTransactions.filter((t) => t.type === "EXPENSE");
     const byCat: Record<string, number> = {};
     for (const t of expenses) {
       const key = t.category || "OTHER";
@@ -202,7 +218,11 @@ export default function FinanceView({
         color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
         pct: `${Math.round((value / total) * 100)}%`,
       }));
-  }, [transactions]);
+  }, [monthTransactions]);
+
+  const shiftMonth = (delta: number) => {
+    setMonthCursor((m) => new Date(m.getFullYear(), m.getMonth() + delta, 1));
+  };
 
   const upcomingPayments = useMemo(() => {
     const today = new Date();
@@ -401,7 +421,7 @@ export default function FinanceView({
     }
   };
 
-  const monthLabel = new Date().toLocaleDateString("en-GB", {
+  const monthLabel = monthCursor.toLocaleDateString("en-GB", {
     month: "short",
     year: "numeric",
   });
@@ -425,14 +445,62 @@ export default function FinanceView({
   );
 
   const monthPicker = (
-    <button
-      type="button"
-      className="h-9 px-3 rounded-full bg-white/90 backdrop-blur-sm border border-[var(--card-border)] flex items-center gap-1.5 text-[12px] font-semibold text-[var(--sidebar-end)] shadow-sm df-focus-ring"
-    >
-      <Calendar className="w-3.5 h-3.5" />
-      {monthLabel}
-      <ChevronDown className="w-3.5 h-3.5 text-[var(--foreground-subtle)]" />
-    </button>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setMonthOpen((v) => !v)}
+        aria-expanded={monthOpen}
+        aria-haspopup="dialog"
+        className="h-9 px-3 rounded-full bg-white/90 backdrop-blur-sm border border-[var(--card-border)] flex items-center gap-1.5 text-[12px] font-semibold text-[var(--sidebar-end)] shadow-sm df-focus-ring cursor-pointer"
+      >
+        <Calendar className="w-3.5 h-3.5" />
+        {monthLabel}
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-[var(--foreground-subtle)] transition-transform ${
+            monthOpen ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+      {monthOpen && (
+        <div className="absolute right-0 top-[calc(100%+6px)] z-30 w-[220px] rounded-2xl bg-white border border-[var(--card-border)] shadow-lg p-3 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              aria-label="Previous month"
+              onClick={() => shiftMonth(-1)}
+              className="w-8 h-8 rounded-full border border-[var(--card-border)] flex items-center justify-center text-[var(--sidebar-end)] df-focus-ring cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <p className="text-[12px] font-bold text-[var(--sidebar-end)] tabular-nums">
+              {monthCursor.toLocaleDateString("en-GB", {
+                month: "long",
+                year: "numeric",
+              })}
+            </p>
+            <button
+              type="button"
+              aria-label="Next month"
+              onClick={() => shiftMonth(1)}
+              className="w-8 h-8 rounded-full border border-[var(--card-border)] flex items-center justify-center text-[var(--sidebar-end)] df-focus-ring cursor-pointer"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const n = new Date();
+              setMonthCursor(new Date(n.getFullYear(), n.getMonth(), 1));
+              setMonthOpen(false);
+            }}
+            className="w-full h-8 rounded-xl bg-[var(--sidebar)] text-white text-[11px] font-semibold df-focus-ring cursor-pointer"
+          >
+            This month
+          </button>
+        </div>
+      )}
+    </div>
   );
 
   return (
@@ -450,7 +518,36 @@ export default function FinanceView({
         {monthPicker}
       </div>
 
-      <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+      <div className="md:hidden flex items-center justify-between gap-2 df-card rounded-[16px] px-2 py-2">
+        <button
+          type="button"
+          aria-label="Previous month"
+          onClick={() => shiftMonth(-1)}
+          className="w-9 h-9 rounded-full border border-[var(--card-border)] bg-white flex items-center justify-center text-[var(--sidebar-end)] df-focus-ring cursor-pointer shrink-0"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setMonthOpen((v) => !v)}
+          className="min-w-0 flex-1 h-9 rounded-full bg-[var(--sidebar)] text-white text-[12px] font-semibold tabular-nums df-focus-ring cursor-pointer"
+        >
+          {monthCursor.toLocaleDateString("en-GB", {
+            month: "long",
+            year: "numeric",
+          })}
+        </button>
+        <button
+          type="button"
+          aria-label="Next month"
+          onClick={() => shiftMonth(1)}
+          className="w-9 h-9 rounded-full border border-[var(--card-border)] bg-white flex items-center justify-center text-[var(--sidebar-end)] df-focus-ring cursor-pointer shrink-0"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+
+      <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5 -mx-0.5 px-0.5">
         {SECTION_TABS.map((tab) => {
           const selected = focusSection === tab.id;
           return (
@@ -903,14 +1000,14 @@ export default function FinanceView({
         <h2 className="text-[14px] font-bold text-[var(--sidebar-end)] px-0.5">
           Recent Transactions
         </h2>
-        {transactions.length === 0 ? (
+        {monthTransactions.length === 0 ? (
           <div className="df-card rounded-[16px] p-4">
             <p className="text-[12px] text-[var(--foreground-muted)]">
-              No transactions yet. Add one to start tracking.
+              No transactions for this month. Add one to start tracking.
             </p>
           </div>
         ) : (
-          transactions.slice(0, 8).map((tx) => (
+          monthTransactions.slice(0, 8).map((tx) => (
             <div
               key={tx._id}
               className="df-card df-card-lift rounded-[16px] p-3 flex items-center justify-between gap-3"

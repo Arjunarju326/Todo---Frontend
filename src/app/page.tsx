@@ -202,6 +202,7 @@ export default function Home() {
               <SettingsView
                 onRefreshDashboard={fetchDashboardData}
                 onLogout={handleLogout}
+                onNavigate={(tab) => navigate(tab)}
               />
             )}
           </div>

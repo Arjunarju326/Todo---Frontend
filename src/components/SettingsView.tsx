@@ -15,9 +15,11 @@ import { useMobileAtmosphere } from "@/lib/mobileAtmosphere";
 export default function SettingsView({
   onRefreshDashboard,
   onLogout,
+  onNavigate,
 }: {
   onRefreshDashboard?: () => void;
   onLogout?: () => void;
+  onNavigate?: (tab: "growth" | "habits" | "inbox" | "reports") => void;
 }) {
   const [settings, setSettings] = useState({
     userName: "Arjun",
@@ -120,6 +122,33 @@ export default function SettingsView({
         </div>
       )}
 
+      {onNavigate && (
+        <div className="df-card df-card-lift p-4 rounded-3xl space-y-3 md:hidden">
+          <h3 className="text-sm font-bold text-[var(--sidebar-end)]">
+            More in Dayflow
+          </h3>
+          <div className="grid grid-cols-2 gap-2">
+            {(
+              [
+                { id: "growth" as const, label: "Growth" },
+                { id: "habits" as const, label: "Habits" },
+                { id: "inbox" as const, label: "Inbox" },
+                { id: "reports" as const, label: "Reports" },
+              ] as const
+            ).map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onNavigate(item.id)}
+                className="h-10 rounded-xl bg-[var(--accent-mint)] text-[var(--sidebar-end)] text-xs font-semibold df-focus-ring cursor-pointer"
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Mobile scenic atmosphere */}
       <div className="df-card df-card-lift p-5 rounded-3xl space-y-3 md:hidden">
         <div className="flex items-start justify-between gap-3">
@@ -155,7 +184,9 @@ export default function SettingsView({
           </button>
         </div>
         <p className="text-[11px] font-semibold text-[var(--sidebar)]">
-          {atmosphereOn ? "On — backgrounds & glass cards active" : "Off — solid cream UI"}
+          {atmosphereOn
+            ? "On — backgrounds & glass cards active"
+            : "Off — pastel doodle cards with soft graffiti washes"}
         </p>
       </div>
 

@@ -15,6 +15,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import MobileHeroBanner from "./dashboard/MobileHeroBanner";
+import PyramidDateStrip from "./PyramidDateStrip";
+import TaskStreak from "./dashboard/TaskStreak";
 
 interface Task {
   _id: string;
@@ -46,19 +48,6 @@ function endOfDay(d: Date) {
 
 function sameDay(a: Date, b: Date) {
   return startOfDay(a).getTime() === startOfDay(b).getTime();
-}
-
-function startOfWeek(d: Date) {
-  const x = startOfDay(d);
-  const day = x.getDay(); // 0 Sun .. 6 Sat
-  x.setDate(x.getDate() - day);
-  return x;
-}
-
-function addDays(d: Date, n: number) {
-  const x = new Date(d);
-  x.setDate(x.getDate() + n);
-  return startOfDay(x);
 }
 
 function priorityClass(priority: string) {
@@ -129,18 +118,6 @@ export default function TasksView({
     fetchTasks();
   }, []);
 
-  const weekDays = useMemo(() => {
-    const start = startOfWeek(selectedDay);
-    return Array.from({ length: 7 }, (_, i) => addDays(start, i));
-  }, [selectedDay]);
-
-  const shiftDayWeek = (delta: number) => {
-    const next = addDays(selectedDay, delta * 7);
-    setSelectedDay(next);
-    setMonthCursor(new Date(next.getFullYear(), next.getMonth(), 1));
-    setTabFilter("TODAY");
-  };
-
   const { startToday, endToday } = useMemo(() => {
     const now = new Date();
     return { startToday: startOfDay(now), endToday: endOfDay(now) };
@@ -166,6 +143,18 @@ export default function TasksView({
 
   const matchesSearch = (t: Task) =>
     !search || t.title.toLowerCase().includes(search.toLowerCase());
+
+  const toDateInputValue = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
+  const openAddForm = () => {
+    setNewDueDate(toDateInputValue(selectedDay));
+    setIsAdding(true);
+  };
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((t) => {
@@ -211,6 +200,41 @@ export default function TasksView({
     startToday,
     endToday,
   ]);
+
+  const completedTasks = useMemo(() => {
+    return tasks
+      .filter((t) => {
+        if (!matchesSearch(t) || t.status !== "DONE") return false;
+        const doneAt = t.completedAt
+          ? new Date(t.completedAt)
+          : t.dueDate
+            ? new Date(t.dueDate)
+            : null;
+        if (viewMode === "day" || viewMode === "calendar") {
+          if (!doneAt) return sameDay(selectedDay, startToday);
+          return sameDay(doneAt, selectedDay);
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const ad = a.completedAt
+          ? new Date(a.completedAt).getTime()
+          : 0;
+        const bd = b.completedAt
+          ? new Date(b.completedAt).getTime()
+          : 0;
+        return bd - ad;
+      });
+  }, [tasks, search, viewMode, selectedDay, startToday]);
+
+  const markedDayKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const t of tasks) {
+      if (t.status === "DONE" || !t.dueDate) continue;
+      keys.add(startOfDay(new Date(t.dueDate)).toISOString());
+    }
+    return keys;
+  }, [tasks]);
 
   const grouped = useMemo(() => {
     const order = ["WORK", "LEARNING", "PERSONAL", "FINANCE"] as const;
@@ -267,6 +291,8 @@ export default function TasksView({
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim()) return;
+    const due =
+      newDueDate || toDateInputValue(selectedDay);
     try {
       const res = await fetch("/api/tasks", {
         method: "POST",
@@ -275,14 +301,14 @@ export default function TasksView({
           title: newTitle,
           category: newCategory,
           priority: newPriority,
-          dueDate: newDueDate || undefined,
+          dueDate: due,
         }),
       });
       const data = await res.json();
       if (data.success) {
         setTasks((prev) => [data.task, ...prev]);
         setNewTitle("");
-        setNewDueDate("");
+        setNewDueDate(toDateInputValue(selectedDay));
         setIsAdding(false);
         onRefreshDashboard?.();
       }
@@ -525,72 +551,16 @@ export default function TasksView({
 
       {viewMode === "day" && (
         <>
-          <h2 className="text-sm font-bold text-[var(--sidebar-end)] tabular-nums text-center">
-            {selectedDay.toLocaleDateString("en-GB", {
-              month: "long",
-              year: "numeric",
-            })}
-          </h2>
-          <div className="flex items-center gap-2 w-full min-w-0">
-            <button
-              type="button"
-              aria-label="Previous week"
-              onClick={() => shiftDayWeek(-1)}
-              className="w-8 h-8 shrink-0 rounded-full border border-[var(--card-border)] bg-white flex items-center justify-center text-[var(--sidebar-end)] df-focus-ring"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <div className="flex-1 min-w-0 grid grid-cols-7 gap-1.5 sm:gap-2">
-              {weekDays.map((day) => {
-                const active = day.getTime() === selectedDay.getTime();
-                const isToday = day.getTime() === startToday.getTime();
-                const dayKey = day.toISOString();
-                const hasTasks = (tasksByDayKey.get(dayKey)?.length || 0) > 0;
-                return (
-                  <button
-                    key={day.toISOString()}
-                    type="button"
-                    onClick={() => {
-                      setSelectedDay(day);
-                      setMonthCursor(
-                        new Date(day.getFullYear(), day.getMonth(), 1)
-                      );
-                      setTabFilter("TODAY");
-                    }}
-                    className={`min-w-0 px-1 py-2.5 rounded-2xl flex flex-col items-center gap-1 transition-all cursor-pointer df-focus-ring ${
-                      active
-                        ? "bg-[var(--sidebar)] text-white shadow-md"
-                        : "bg-white border border-[var(--card-border)] text-[var(--sidebar-end)]"
-                    }`}
-                  >
-                    <span
-                      className={`text-[10px] font-semibold uppercase ${
-                        active
-                          ? "text-[#c5d9c5]"
-                          : "text-[var(--foreground-muted)]"
-                      }`}
-                    >
-                      {day.toLocaleDateString("en-GB", { weekday: "short" })}
-                    </span>
-                    <span className="text-[16px] font-bold leading-none tabular-nums">
-                      {day.getDate()}
-                    </span>
-                    {(isToday || hasTasks) && !active && (
-                      <span className="w-1 h-1 rounded-full bg-[var(--sidebar)]" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-            <button
-              type="button"
-              aria-label="Next week"
-              onClick={() => shiftDayWeek(1)}
-              className="w-8 h-8 shrink-0 rounded-full border border-[var(--card-border)] bg-white flex items-center justify-center text-[var(--sidebar-end)] df-focus-ring"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+          <PyramidDateStrip
+            selectedDay={selectedDay}
+            markedKeys={markedDayKeys}
+            onSelect={(day) => {
+              setSelectedDay(day);
+              setMonthCursor(new Date(day.getFullYear(), day.getMonth(), 1));
+              setTabFilter("TODAY");
+            }}
+          />
+          <TaskStreak tasks={tasks} />
           {renderFilterChips()}
         </>
       )}
@@ -804,9 +774,27 @@ export default function TasksView({
         </div>
       )}
 
+      {!loading && completedTasks.length > 0 && (
+        <section className="space-y-2 pt-1">
+          <div className="flex items-center justify-between px-0.5">
+            <h2 className="text-[13px] font-bold text-[var(--sidebar-end)]">
+              Completed{" "}
+              <span className="text-[var(--foreground-muted)] font-semibold">
+                ({completedTasks.length})
+              </span>
+            </h2>
+          </div>
+          <ul className="space-y-2 df-stagger-fast opacity-90">
+            {completedTasks.map((task) =>
+              renderTaskRow(task, { showDate: true })
+            )}
+          </ul>
+        </section>
+      )}
+
       <button
         type="button"
-        onClick={() => setIsAdding(true)}
+        onClick={openAddForm}
         className="w-full h-12 rounded-2xl bg-[var(--sidebar)] text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(31,77,54,0.25)] hover:bg-[var(--sidebar-soft)] transition-colors cursor-pointer df-focus-ring"
       >
         <Plus className="w-5 h-5 stroke-[2.5]" />
