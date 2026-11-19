@@ -213,7 +213,11 @@ export default function Home() {
         )}
       </main>
 
-      <SmrtiPopup enabled={!loading && !!user && activeTab !== "smrti"} />
+      <SmrtiPopup
+        enabled={!loading && !!user && activeTab !== "smrti"}
+        userName={displayName}
+        onNavigate={(tab) => navigate(tab as NavTab)}
+      />
 
       <QuickAddModal
         isOpen={quickAddOpen}

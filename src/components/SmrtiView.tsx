@@ -12,6 +12,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import MobileHeroBanner from "./dashboard/MobileHeroBanner";
+import { SMRTI_AVATARS, SmrtiPose } from "@/lib/smrtiAvatars";
 
 type Briefing = {
   greeting?: string;
@@ -33,6 +34,7 @@ export default function SmrtiView() {
   const [telling, setTelling] = useState(false);
   const [tellReply, setTellReply] = useState("");
   const [createdTaskTitle, setCreatedTaskTitle] = useState("");
+  const [pose, setPose] = useState<SmrtiPose>("default");
 
   const load = useCallback(async (refresh = false) => {
     setLoading(true);
@@ -75,6 +77,7 @@ export default function SmrtiView() {
     e.preventDefault();
     if (!tell.trim() || telling) return;
     setTelling(true);
+    setPose("thinking");
     setTellReply("");
     setCreatedTaskTitle("");
     setError("");
@@ -90,12 +93,15 @@ export default function SmrtiView() {
         setTellReply(data.reply || "Saved.");
         setCreatedTaskTitle(data.task?.title || "");
         setTell("");
+        setPose("success");
         await load(true);
       } else {
         setError(data.error || "Smrti could not save that");
+        setPose("explaining");
       }
     } catch {
       setError("Could not reach Smrti");
+      setPose("explaining");
     } finally {
       setTelling(false);
     }
@@ -133,29 +139,62 @@ export default function SmrtiView() {
         {refreshBtn}
       </div>
 
-      <section className="df-card rounded-[20px] p-4 flex flex-col sm:flex-row gap-4 items-center">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/images/assistant/smrti.png"
-          alt="Smrti"
-          className="w-28 sm:w-36 h-auto drop-shadow-md"
-        />
-        <div className="min-w-0 flex-1 text-center sm:text-left">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--sidebar)] flex items-center justify-center sm:justify-start gap-1">
-            <Sparkles className="w-3.5 h-3.5" />
-            About Smrti
-          </p>
-          <p className="text-[14px] text-[var(--sidebar-end)] font-medium mt-1 leading-relaxed">
-            Named for <span className="font-bold">memory</span> — built for a Python
-            developer learning AI/ML in Kannur who needs help holding onto daily
-            responsibilities. Smrti uses your Dayflow tasks plus a knowledge base
-            (RAG) to nudge what matters next.
+      <section className="df-card overflow-hidden rounded-[24px] flex flex-col sm:flex-row">
+        <div className="sm:w-[38%] relative min-h-[180px] bg-gradient-to-b from-[#e8f2e6] to-[#cfe3cb] flex items-end justify-center overflow-hidden">
+          <div className="absolute top-[14%] left-1/2 -translate-x-1/2 w-[72%] aspect-square rounded-full bg-[#c5dbc0]/75" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            key={pose}
+            src={SMRTI_AVATARS[pose]}
+            alt="Smrti"
+            className="relative z-[1] w-[70%] max-w-[200px] h-auto drop-shadow-md"
+          />
+        </div>
+        <div className="min-w-0 flex-1 p-4 sm:p-5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Sparkles className="w-4 h-4 text-[var(--sidebar)]" />
+            <p className="text-[14px] font-extrabold tracking-wide text-[var(--sidebar-end)]">
+              SMRTI
+            </p>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#e6f0e3] text-[var(--sidebar)]">
+              AI Assistant
+            </span>
+          </div>
+          <p className="text-[13px] text-[var(--sidebar-end)] font-medium mt-2 leading-relaxed">
+            Named for <span className="font-bold">memory</span> — she turns “remind me”
+            and meetings into Dayflow tasks, then nudges you so responsibilities
+            don’t slip.
           </p>
           {briefing?.profile ? (
             <p className="text-[11px] text-[var(--foreground-muted)] mt-2">
               Profile: {briefing.profile.role} · {briefing.profile.location}
             </p>
           ) : null}
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {(
+              [
+                "default",
+                "greeting",
+                "thinking",
+                "explaining",
+                "success",
+                "listening",
+              ] as SmrtiPose[]
+            ).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPose(p)}
+                className={`text-[10px] font-semibold px-2.5 py-1 rounded-full capitalize df-focus-ring cursor-pointer ${
+                  pose === p
+                    ? "bg-[var(--sidebar)] text-white"
+                    : "bg-[#f0f5ee] text-[var(--sidebar-end)]"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
