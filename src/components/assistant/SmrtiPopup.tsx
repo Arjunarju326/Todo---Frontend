@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { X, Sparkles } from "lucide-react";
+import { X, Sparkles, Send, CheckCircle2 } from "lucide-react";
 
 type Briefing = {
   greeting?: string;
@@ -23,6 +23,9 @@ export default function SmrtiPopup({
   const [open, setOpen] = useState(false);
   const [briefing, setBriefing] = useState<Briefing | null>(null);
   const [loading, setLoading] = useState(false);
+  const [tell, setTell] = useState("");
+  const [telling, setTelling] = useState(false);
+  const [reply, setReply] = useState("");
 
   useEffect(() => {
     if (!enabled) return;
@@ -47,7 +50,7 @@ export default function SmrtiPopup({
           setOpen(true);
         }
       } catch {
-        /* silent — don't block app */
+        /* silent */
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -68,6 +71,33 @@ export default function SmrtiPopup({
       );
     } catch {
       /* ignore */
+    }
+  };
+
+  const tellSmrti = async (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!tell.trim() || telling) return;
+    setTelling(true);
+    setReply("");
+    try {
+      const res = await fetch("/api/assistant/capture", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: tell.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setReply(data.reply || `Saved “${data.task?.title || "task"}”.`);
+        setTell("");
+      } else {
+        setReply(data.error || "Could not save that.");
+      }
+    } catch {
+      setReply("Could not reach Smrti.");
+    } finally {
+      setTelling(false);
     }
   };
 
@@ -133,19 +163,40 @@ export default function SmrtiPopup({
                 {briefing.methodTip}
               </p>
             ) : null}
-            {briefing.newsBite ? (
-              <p className="text-[12px] text-[var(--foreground-muted)] mt-2 leading-relaxed">
-                <span className="font-semibold text-[var(--sidebar-end)]">
-                  Tip:{" "}
-                </span>
-                {briefing.newsBite}
+
+            <form onSubmit={tellSmrti} className="mt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
+              <p className="text-[11px] font-semibold text-[var(--sidebar-end)]">
+                Tell me what to remember
               </p>
-            ) : null}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={tell}
+                  onChange={(e) => setTell(e.target.value)}
+                  placeholder="Meeting tomorrow at 4:30…"
+                  className="flex-1 min-w-0 h-10 px-3 rounded-xl bg-[var(--background)] border border-[var(--card-border)] text-[12px] outline-none focus:border-[var(--sidebar)]"
+                />
+                <button
+                  type="submit"
+                  disabled={telling || !tell.trim()}
+                  className="h-10 w-10 rounded-xl bg-[var(--sidebar)] text-white flex items-center justify-center df-focus-ring cursor-pointer disabled:opacity-60 shrink-0"
+                  aria-label="Save reminder"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+              {reply ? (
+                <p className="text-[11px] text-[var(--sidebar-end)] font-medium flex items-start gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[var(--primary)] shrink-0 mt-0.5" />
+                  {reply}
+                </p>
+              ) : null}
+            </form>
 
             <button
               type="button"
               onClick={dismiss}
-              className="mt-4 w-full h-10 rounded-xl bg-[var(--sidebar)] text-white text-[12px] font-semibold df-focus-ring cursor-pointer"
+              className="mt-3 w-full h-10 rounded-xl bg-[var(--sidebar)] text-white text-[12px] font-semibold df-focus-ring cursor-pointer"
             >
               {loading ? "Got it" : "Got it — thanks Smrti"}
             </button>
