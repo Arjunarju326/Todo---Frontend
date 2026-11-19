@@ -13,6 +13,8 @@ import HabitsView from "@/components/HabitsView";
 import InboxView from "@/components/InboxView";
 import ReportsView from "@/components/ReportsView";
 import SettingsView from "@/components/SettingsView";
+import SmrtiView from "@/components/SmrtiView";
+import SmrtiPopup from "@/components/assistant/SmrtiPopup";
 import QuickAddModal from "@/components/QuickAddModal";
 import MobileAtmosphereBackground from "@/components/MobileAtmosphereBackground";
 import { useAuth } from "@/lib/auth";
@@ -198,6 +200,8 @@ export default function Home() {
               />
             )}
 
+            {activeTab === "smrti" && <SmrtiView />}
+
             {activeTab === "settings" && (
               <SettingsView
                 onRefreshDashboard={fetchDashboardData}
@@ -208,6 +212,8 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      <SmrtiPopup enabled={!loading && !!user && activeTab !== "smrti"} />
 
       <QuickAddModal
         isOpen={quickAddOpen}

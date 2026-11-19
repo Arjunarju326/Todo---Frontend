@@ -19,7 +19,7 @@ export default function SettingsView({
 }: {
   onRefreshDashboard?: () => void;
   onLogout?: () => void;
-  onNavigate?: (tab: "growth" | "habits" | "inbox" | "reports") => void;
+  onNavigate?: (tab: "growth" | "habits" | "inbox" | "reports" | "smrti") => void;
 }) {
   const [settings, setSettings] = useState({
     userName: "Arjun",
@@ -134,6 +134,7 @@ export default function SettingsView({
                 { id: "habits" as const, label: "Habits" },
                 { id: "inbox" as const, label: "Inbox" },
                 { id: "reports" as const, label: "Reports" },
+                { id: "smrti" as const, label: "Smrti" },
               ] as const
             ).map((item) => (
               <button

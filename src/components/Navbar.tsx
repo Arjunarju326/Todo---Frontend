@@ -18,6 +18,7 @@ import {
   Flame,
   TrendingUp,
   LogOut,
+  Brain,
 } from "lucide-react";
 
 export type NavTab =
@@ -29,6 +30,7 @@ export type NavTab =
   | "habits"
   | "inbox"
   | "reports"
+  | "smrti"
   | "settings";
 
 export type NavSection =
@@ -155,6 +157,7 @@ export default function Navbar({
     { id: "habits", label: "Habits", icon: Flame },
     { id: "inbox", label: "Notes & Inbox", icon: StickyNote },
     { id: "reports", label: "Reports", icon: BarChart3 },
+    { id: "smrti", label: "Smrti", icon: Brain },
     { id: "settings", label: "Settings", icon: Settings },
   ];
 
@@ -660,6 +663,7 @@ export default function Navbar({
                 activeTab === "habits" ||
                 activeTab === "inbox" ||
                 activeTab === "reports" ||
+                activeTab === "smrti" ||
                 activeTab === "growth"
                   ? "page"
                   : undefined
@@ -669,6 +673,7 @@ export default function Navbar({
                 activeTab === "habits" ||
                 activeTab === "inbox" ||
                 activeTab === "reports" ||
+                activeTab === "smrti" ||
                 activeTab === "growth"
                   ? "text-[var(--sidebar)]"
                   : "text-[var(--foreground-subtle)]"
@@ -680,6 +685,7 @@ export default function Navbar({
                   activeTab === "habits" ||
                   activeTab === "inbox" ||
                   activeTab === "reports" ||
+                  activeTab === "smrti" ||
                   activeTab === "growth"
                     ? "stroke-[2.25]"
                     : "stroke-[1.75]"
@@ -691,6 +697,7 @@ export default function Navbar({
                   activeTab === "habits" ||
                   activeTab === "inbox" ||
                   activeTab === "reports" ||
+                  activeTab === "smrti" ||
                   activeTab === "growth"
                     ? "font-bold"
                     : "font-medium"
